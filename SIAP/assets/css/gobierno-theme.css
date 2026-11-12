@@ -1,0 +1,286 @@
+/* Tema Institucional SIAP basado en paleta de colores oficial */
+
+:root {
+  --color-guinda: #691C32;         /* Pantone 7421 C */
+  --color-vino: #9F2241;           /* Pantone 7420 C */
+  --color-verde-oscuro: #10312B;   /* Pantone 627 C */
+  --color-verde: #235B4E;          /* Pantone 626 C */
+  --color-dorado: #BC955C;         /* Pantone 465 C */
+  --color-arena: #DDC9A3;          /* Pantone 468 C */
+  --color-gris-claro: #98989A;     /* Pantone Cool Gray 7 C */
+  --color-gris-oscuro: #6F7271;    /* Pantone 424 C */
+}
+
+/* =========================================
+   Fondo Global del Sistema
+========================================= */
+html, body, .main-content {
+    background-color: #E8E4D9 !important; /* Crema/Arena que resalta las tarjetas blancas */
+    min-height: 100vh;
+}
+
+/* =========================================
+   Overrides Principales (Primary = Guinda)
+========================================= */
+.bg-gradient-primary {
+  background-image: linear-gradient(310deg, var(--color-guinda) 0%, var(--color-vino) 100%) !important;
+}
+
+.btn-primary, .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+  background-image: linear-gradient(310deg, var(--color-guinda) 0%, var(--color-vino) 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 6px rgba(105, 28, 50, 0.2) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 7px 14px rgba(105, 28, 50, 0.25) !important;
+}
+
+.text-primary {
+  color: var(--color-guinda) !important;
+}
+
+/* =========================================
+   Overrides Éxito (Success = Verde)
+========================================= */
+.bg-gradient-success {
+  background-image: linear-gradient(310deg, var(--color-verde-oscuro) 0%, var(--color-verde) 100%) !important;
+}
+
+.btn-success, .btn-success:hover, .btn-success:focus, .btn-success:active {
+  background-image: linear-gradient(310deg, var(--color-verde-oscuro) 0%, var(--color-verde) 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 6px rgba(16, 49, 43, 0.2) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-success:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 7px 14px rgba(16, 49, 43, 0.25) !important;
+}
+
+.text-success {
+  color: var(--color-verde) !important;
+}
+
+/* =========================================
+   Overrides Peligro (Danger = Vino)
+========================================= */
+.bg-gradient-danger {
+  background-image: linear-gradient(310deg, var(--color-vino) 0%, #b32a4e 100%) !important;
+}
+
+.btn-danger, .btn-danger:hover, .btn-danger:focus, .btn-danger:active {
+  background-image: linear-gradient(310deg, var(--color-vino) 0%, #b32a4e 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 6px rgba(159, 34, 65, 0.2) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 7px 14px rgba(159, 34, 65, 0.25) !important;
+}
+
+.text-danger {
+  color: var(--color-vino) !important;
+}
+
+/* =========================================
+   Overrides Advertencia (Warning = Dorado)
+========================================= */
+.bg-gradient-warning {
+  background-image: linear-gradient(310deg, var(--color-dorado) 0%, var(--color-arena) 100%) !important;
+}
+
+.btn-warning, .btn-warning:hover, .btn-warning:focus, .btn-warning:active {
+  background-image: linear-gradient(310deg, var(--color-dorado) 0%, var(--color-arena) 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 6px rgba(188, 149, 92, 0.2) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-warning:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 7px 14px rgba(188, 149, 92, 0.25) !important;
+}
+
+.text-warning {
+  color: var(--color-dorado) !important;
+}
+
+/* =========================================
+   Elementos de Interfaz Personalizados
+========================================= */
+
+/* Pestañas (Tabs estilo Folder) */
+.nav-tabs {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+}
+.nav-tabs .nav-item {
+    margin-bottom: 0;
+}
+.nav-tabs .nav-link {
+    color: var(--color-gris-oscuro) !important;
+    border: none !important;
+    background-color: transparent !important;
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+    transition: all 0.2s;
+}
+.nav-tabs .nav-link:hover {
+    color: var(--color-vino) !important;
+    background-color: rgba(255,255,255,0.5) !important;
+}
+.nav-tabs .nav-link.active {
+    color: var(--color-guinda) !important;
+    background-color: #FFFFFF !important;
+    box-shadow: 0 -4px 10px -2px rgba(0,0,0,0.03);
+}
+
+.tab-content-card {
+    background-color: #FFFFFF;
+    border-radius: 1rem; /* Esquinas completamente redondeadas */
+    box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+    padding: 2rem;
+    border: none;
+}
+
+/* Iconos en Menu */
+.module-icon-container {
+    color: white !important;
+}
+
+/* Textos oscuros */
+.text-dark {
+    color: var(--color-gris-oscuro) !important;
+}
+
+/* Bordes y Focus de Inputs (Globales) */
+.form-control, .form-select, .dataTables_filter input, .dataTables_length select {
+    background-color: #F8F7F4 !important;
+    border: 1px solid #EBE9E1 !important;
+    border-radius: 0.5rem;
+    color: var(--color-gris-oscuro);
+    transition: all 0.2s;
+}
+.form-select, .dataTables_length select {
+    padding-right: 2.5rem !important; /* Espacio extra para que el número no se pegue a la flecha */
+    background-position: right 0.75rem center !important;
+}
+.form-control:focus, .form-select:focus, .dataTables_filter input:focus, .dataTables_length select:focus {
+    background-color: #FFFFFF !important;
+    border-color: var(--color-vino) !important;
+    box-shadow: 0 0 0 3px rgba(159, 34, 65, 0.2) !important;
+}
+
+/* =========================================
+   Paginación de DataTables
+========================================= */
+/* Botones de números (inactivos) */
+.page-item .page-link {
+    background-color: #F8F7F4 !important;
+    color: var(--color-gris-oscuro) !important;
+    border: 1px solid #EBE9E1 !important;
+    margin: 0 3px;
+    transition: all 0.2s;
+}
+
+/* Hover para botones de números (tono oscuro del fondo) */
+.page-item .page-link:hover {
+    background-color: #EBE9E1 !important;
+    background-image: none !important;
+    color: var(--color-gris-oscuro) !important;
+    border-color: #DDC9A3 !important;
+}
+
+/* Botón de número seleccionado */
+.page-item.active .page-link {
+    background-color: var(--color-guinda) !important;
+    background-image: linear-gradient(310deg, var(--color-guinda) 0%, var(--color-vino) 100%) !important;
+    color: #FFFFFF !important;
+    border-color: var(--color-guinda) !important;
+    box-shadow: 0 4px 6px rgba(105, 28, 50, 0.2) !important;
+}
+
+/* Botones Anterior y Siguiente siempre en Guinda */
+.page-item.previous .page-link,
+.page-item.next .page-link {
+    background-color: var(--color-guinda) !important;
+    background-image: linear-gradient(310deg, var(--color-guinda) 0%, var(--color-vino) 100%) !important;
+    color: #FFFFFF !important;
+    border-color: var(--color-guinda) !important;
+    box-shadow: 0 4px 6px rgba(105, 28, 50, 0.2) !important;
+    border-radius: 50% !important; /* Volver a círculos perfectos */
+}
+
+.page-item.previous .page-link:hover,
+.page-item.next .page-link:hover {
+    background-image: linear-gradient(310deg, var(--color-vino) 0%, var(--color-guinda) 100%) !important;
+    color: #FFFFFF !important;
+}
+
+/* Estado deshabilitado (ej. Anterior estando en página 1) */
+.page-item.disabled .page-link {
+    background-color: #FFFFFF !important;
+    background-image: none !important;
+    color: #cecece !important;
+    border-color: #EBE9E1 !important;
+    box-shadow: none !important;
+    border-radius: 50% !important;
+}
+
+/* =========================================
+   Overrides SweetAlert2 (Globales)
+========================================= */
+.swal2-popup {
+    border-radius: 1rem !important;
+    font-family: "Open Sans", sans-serif !important;
+}
+
+.swal2-confirm {
+    background-image: linear-gradient(310deg, var(--color-verde-oscuro) 0%, var(--color-verde) 100%) !important;
+    background-color: transparent !important;
+    border: none !important;
+    color: white !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 4px 6px rgba(16, 49, 43, 0.2) !important;
+    padding: 0.625rem 1.25rem !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.swal2-confirm:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 7px 14px rgba(16, 49, 43, 0.25) !important;
+}
+
+.swal2-cancel {
+    background-image: linear-gradient(310deg, var(--color-guinda) 0%, var(--color-vino) 100%) !important;
+    background-color: transparent !important;
+    border: none !important;
+    color: white !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 4px 6px rgba(105, 28, 50, 0.2) !important;
+    padding: 0.625rem 1.25rem !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.swal2-cancel:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 7px 14px rgba(105, 28, 50, 0.25) !important;
+}
+
