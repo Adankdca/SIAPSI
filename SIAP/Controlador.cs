@@ -12,7 +12,6 @@ namespace SIAP
 {
     public class Controlador
     {
-        Cnn cn;
         string sql, html;
         string urlnew;
         DataTable bloque1;
@@ -49,13 +48,13 @@ namespace SIAP
         public DataTable Cargartipoadecuacion()
         {
 
-            DataTable dt = null;
+            DataTable dt = new DataTable(); // vacía si falla, para no romper a quien recorre dt.Rows
             try
             {
                 AbrirConexion();
-                SqlDataAdapter da = new SqlDataAdapter("Get_All_SIAP_tipoadeacuacion", conexion);
-                da.SelectCommand.CommandType = CommandType.StoredProcedure;
-                da.SelectCommand.Parameters.Clear();
+                // El procedimiento Get_All_SIAP_tipoadeacuacion no existe en SIAP_DB; se consulta el catálogo directamente
+                SqlDataAdapter da = new SqlDataAdapter(
+                    "SELECT CAST(Id AS VARCHAR(10)) AS idtipoadecuacion, Descripcion AS nombre FROM cat_tipoadecuacion ORDER BY Descripcion", conexion);
                 dt = new DataTable();
                 da.Fill(dt);
             }
@@ -67,13 +66,14 @@ namespace SIAP
         public DataTable Cargarestatus()
         {
 
-            DataTable dt = null;
+            DataTable dt = new DataTable(); // vacía si falla, para no romper a quien recorre dt.Rows
             try
             {
                 AbrirConexion();
-                SqlDataAdapter da = new SqlDataAdapter("Get_All_SIAP_estatusadeacuacion", conexion);
-                da.SelectCommand.CommandType = CommandType.StoredProcedure;
-                da.SelectCommand.Parameters.Clear();
+                // El procedimiento Get_All_SIAP_estatusadeacuacion no existe; no hay catálogo de estatus,
+                // así que se devuelven los estatus que ya se usan en adecuaciones
+                SqlDataAdapter da = new SqlDataAdapter(
+                    "SELECT DISTINCT Estatus AS idestatusadecuacion, Estatus AS estatusadecuacion FROM adecuaciones WHERE Estatus IS NOT NULL AND Estatus <> '' ORDER BY Estatus", conexion);
                 dt = new DataTable();
                 da.Fill(dt);
             }
@@ -87,15 +87,20 @@ namespace SIAP
         //==========================================FUNCIÓN CONSULTAS==================================================================
         public DataTable datonoliberado(string clavepresupuestal)
         {
-            DataTable dt = null;
+            DataTable dt = new DataTable(); // vacía si falla, para no romper a quien recorre dt.Rows
             try
             {
                 AbrirConexion();
-                SqlDataAdapter da = new SqlDataAdapter("Get_All_SIAP_noliberado", conexion);
-                da.SelectCommand.CommandType = CommandType.StoredProcedure;
-                da.SelectCommand.Parameters.Clear();
-                da.SelectCommand.Parameters.AddWithValue("@clavepresupuestal", Convert.ToString(clavepresupuestal));
-                da.SelectCommand.ExecuteNonQuery();
+                // El procedimiento Get_All_SIAP_noliberado no existe; se calcula desde presupuestocalendarizado.
+                // No liberado = PorLiberar (mes cero); Liberado = suma de enero a diciembre.
+                SqlDataAdapter da = new SqlDataAdapter(@"
+                    SELECT TOP 1
+                        ISNULL(PorLiberar, 0) AS noliberado,
+                        ISNULL(Enero,0) + ISNULL(Febrero,0) + ISNULL(Marzo,0) + ISNULL(Abril,0) + ISNULL(Mayo,0) + ISNULL(Junio,0)
+                      + ISNULL(Julio,0) + ISNULL(Agosto,0) + ISNULL(Septiembre,0) + ISNULL(Octubre,0) + ISNULL(Noviembre,0) + ISNULL(Diciembre,0) AS liberado
+                    FROM presupuestocalendarizado
+                    WHERE ClavePresupuestal = @clavepresupuestal", conexion);
+                da.SelectCommand.Parameters.Add("@clavepresupuestal", SqlDbType.NVarChar, 150).Value = Convert.ToString(clavepresupuestal);
                 dt = new DataTable();
                 da.Fill(dt);
             }

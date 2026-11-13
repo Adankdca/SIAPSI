@@ -10,7 +10,7 @@ using SIAP.Services;
 using System.Collections.Concurrent;
 using System.Configuration;
 using Dapper;
-using MySql.Data.MySqlClient;
+using System.Data.SqlClient;
 
 namespace SIAP.Controllers
 {
@@ -52,7 +52,7 @@ namespace SIAP.Controllers
                         bool isDuplicate = false;
                         if (!string.IsNullOrWhiteSpace(result.Oficio))
                         {
-                            using (var conn = new MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                            using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                             {
                                 conn.Open();
                                 string sqlDuplicate = "SELECT COUNT(1) FROM adecuaciones WHERE NumSolicitud = @oficio OR NumOficio = @oficio";
@@ -85,7 +85,7 @@ namespace SIAP.Controllers
                         // Verificar si las claves existen
                         if (result.Movimientos != null && result.Movimientos.Count > 0)
                         {
-                            using (var conn = new MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                            using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                             {
                                 conn.Open();
                                 string sqlCheck = "SELECT COUNT(1) FROM presupuestocalendarizado WHERE ClavePresupuestal = @clave";
@@ -174,7 +174,7 @@ namespace SIAP.Controllers
                 // Validar duplicidad estricta aquí antes de guardar
                 if (!string.IsNullOrWhiteSpace(dto.NumSolicitud))
                 {
-                    using (var conn = new MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                    using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                     {
                         conn.Open();
                         string sqlDuplicate = "SELECT COUNT(1) FROM adecuaciones WHERE NumSolicitud = @oficio OR NumOficio = @oficio";

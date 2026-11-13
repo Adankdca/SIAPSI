@@ -181,6 +181,23 @@
         </div>
         <% } %>
         
+        <!-- 1b. Presupuesto Inicial (carga del Excel) -->
+        <% if (Session["VerPresupuesto"] != null && (bool)Session["VerPresupuesto"]) { %>
+        <div class="col-xl-4 col-md-6 mb-4">
+          <a href="PresupuestoInicial.aspx" class="module-link">
+            <div class="card module-card">
+              <div class="card-body">
+                <div class="module-icon-container gradient-success shadow-success">
+                  <i class="fa-solid fa-file-import"></i>
+                </div>
+                <h5 class="font-weight-bolder">Presupuesto Inicial</h5>
+                <p class="text-sm text-muted mb-0">Carga del Excel del ejercicio, validaci&oacute;n por fila e historial de cargas.</p>
+              </div>
+            </div>
+          </a>
+        </div>
+        <% } %>
+
         <!-- 2. Presupuesto -->
         <% if (Session["VerPresupuesto"] != null && (bool)Session["VerPresupuesto"]) { %>
         <div class="col-xl-4 col-md-6 mb-4">

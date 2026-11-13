@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using MySql.Data.MySqlClient;
+using System.Data.SqlClient;
 using System.Linq;
 using Dapper;
 using SIAP.Models;
@@ -23,7 +23,7 @@ namespace SIAP.Repositories
 
         public List<Modeltipoministracion> GetTiposMinistracion()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id, Clave, Descripcion 
                                FROM cat_tipoministracion 
@@ -35,7 +35,7 @@ namespace SIAP.Repositories
         // NUEVO: Obtener tipos de ministración folio
         public List<ModelTipoMinistracionFolio> GetTiposMinistracionFolio()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id, Clave, Descripcion 
                                FROM cat_tipoministracionfolio 
@@ -46,7 +46,7 @@ namespace SIAP.Repositories
 
         public string GetSiguienteFolio(int anio, int mes, int idTipoFolio)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var tipoFolio = con.QueryFirstOrDefault<ModelTipoMinistracionFolio>("SELECT * FROM cat_tipoministracionfolio WHERE Id = @Id", new { Id = idTipoFolio });
                 if (tipoFolio == null) return "";
@@ -74,7 +74,7 @@ namespace SIAP.Repositories
         // NUEVO: Obtener sub-fuentes de financiamiento
         public List<ModelSubFuenteFinanciamiento> GetSubFuentesFinanciamiento()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id, Clave, Descripcion 
                                FROM cat_subfuentefinanciamiento 
@@ -86,7 +86,7 @@ namespace SIAP.Repositories
         // NUEVO: Obtener proyectos estratégicos
         public List<ModelProyectoEstrategico> GetProyectosEstrategicos()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id, Clave, Descripcion 
                                FROM cat_proyectoestrategico 
@@ -97,7 +97,7 @@ namespace SIAP.Repositories
 
         public List<Modelministracion> GetMinistracionesCatalogo()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id as idministracion, Folio as numministracion 
                                FROM ministraciones 
@@ -128,7 +128,7 @@ namespace SIAP.Repositories
 
         public List<ModelDigitoMinistracion> GetDigitosMinistracion()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id, Clave, Clave as DM, Descripcion 
                                FROM cat_digitosministracion 
@@ -139,7 +139,7 @@ namespace SIAP.Repositories
 
         public List<ModelFuenteFinanciamiento> GetFuentesFinanciamiento()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id, Clave, Descripcion 
                                FROM cat_fuentefinanciamiento 
@@ -150,7 +150,7 @@ namespace SIAP.Repositories
 
         public List<ModelProgramaFondo> GetProgramasFondo()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"
                     SELECT 
@@ -175,7 +175,7 @@ namespace SIAP.Repositories
 
         public List<ModelRamo> GetRamos()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id, Clave, Descripcion 
                                FROM cat_ramo 
@@ -186,7 +186,7 @@ namespace SIAP.Repositories
 
         public List<ModelTipoRecurso> GetTiposRecurso()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"SELECT Id, Clave, Descripcion 
                                FROM cat_tiporecurso 
@@ -197,7 +197,7 @@ namespace SIAP.Repositories
 
         public ModelProgramaFondo GetProgramaFondoById(int id)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = @"
                     SELECT 
@@ -237,7 +237,7 @@ namespace SIAP.Repositories
             int? programaFondoId = null,
             string estatus = null)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var sql = @"
                     SELECT 
@@ -366,9 +366,9 @@ namespace SIAP.Repositories
                             var sqlPresupuesto = $@"
                                 SELECT COALESCE(SUM({columnaMes}), 0) 
                                 FROM presupuestocalendarizado pc 
-                                WHERE pc.ClavePresupuestal IN @claves
+                                WHERE pc.ClavePresupuestal IN (SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(@claves, ','))
                             ";
-                            item.PresupuestoCalendarizado = con.QueryFirstOrDefault<decimal>(sqlPresupuesto, new { claves = claves });
+                            item.PresupuestoCalendarizado = con.QueryFirstOrDefault<decimal>(sqlPresupuesto, new { claves = string.Join(",", claves) });
                         }
                         else
                         {
@@ -420,7 +420,7 @@ namespace SIAP.Repositories
 
         public List<ModelClavePresupuestal> GetClavesPresupuestales(string filtro = "")
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var sql = @"
                     SELECT DISTINCT
@@ -473,7 +473,7 @@ namespace SIAP.Repositories
 
         public List<ModelClavePresupuestalPorMes> GetClavesPresupuestalesPorMes(int mes, int anio)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var columna = ObtenerNombreColumnaMes(mes);
 
@@ -527,7 +527,7 @@ namespace SIAP.Repositories
 
         public List<ModelClavePresupuestalPorMes> GetClavesPresupuestalesOtrosMeses(int mesActual, int anio)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var mesesPosteriores = new List<int>();
                 for (int m = mesActual + 1; m <= 12; m++)
@@ -619,7 +619,7 @@ namespace SIAP.Repositories
 
         public decimal GetSumaClavesPorMes(int mes, string clave)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var columna = ObtenerNombreColumnaMes(mes);
                 var sql = $@"
@@ -646,7 +646,7 @@ namespace SIAP.Repositories
 
         public ModelMinistracionCompleta GetMinistracionById(int id)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var sql = @"
                     SELECT 
@@ -734,9 +734,9 @@ namespace SIAP.Repositories
                             var sqlPresupuesto = $@"
                                 SELECT COALESCE(SUM({columnaMes}), 0) 
                                 FROM presupuestocalendarizado pc 
-                                WHERE pc.ClavePresupuestal IN @claves
+                                WHERE pc.ClavePresupuestal IN (SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(@claves, ','))
                             ";
-                            resultado.PresupuestoCalendarizado = con.QueryFirstOrDefault<decimal>(sqlPresupuesto, new { claves = claves });
+                            resultado.PresupuestoCalendarizado = con.QueryFirstOrDefault<decimal>(sqlPresupuesto, new { claves = string.Join(",", claves) });
                         }
                         else
                         {
@@ -779,7 +779,7 @@ namespace SIAP.Repositories
 
         public ModelMinistracionDetalleCompleto GetMinistracionDetalleCompleto(int id)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var sql = @"
                     SELECT 
@@ -870,9 +870,9 @@ namespace SIAP.Repositories
                             var sqlPresupuesto = $@"
                                 SELECT COALESCE(SUM({columnaMes}), 0) 
                                 FROM presupuestocalendarizado pc 
-                                WHERE pc.ClavePresupuestal IN @claves
+                                WHERE pc.ClavePresupuestal IN (SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(@claves, ','))
                             ";
-                            resultado.PresupuestoCalendarizado = con.QueryFirstOrDefault<decimal>(sqlPresupuesto, new { claves = claves });
+                            resultado.PresupuestoCalendarizado = con.QueryFirstOrDefault<decimal>(sqlPresupuesto, new { claves = string.Join(",", claves) });
                         }
                         else
                         {
@@ -900,6 +900,7 @@ namespace SIAP.Repositories
                         resultado.tipoClave = resultado.TipoClave;
 
                         var sqlClaves = @"
+                            SELECT TOP 10 * FROM (
                             SELECT DISTINCT
                                 pc.ClavePresupuestal,
                                 '' as Descripcion,
@@ -919,8 +920,8 @@ namespace SIAP.Repositories
                             WHERE m2.ClavePresupuestal = @clavePresupuestal
                               AND m2.Id != @id
                               AND m2.Estatus != 'CANCELADA'
+                            ) x
                             ORDER BY Mes DESC
-                            LIMIT 10
                         ";
 
                         resultado.ClavesRelacionadas = con.Query<ModelClaveRelacionada>(sqlClaves, new
@@ -939,9 +940,9 @@ namespace SIAP.Repositories
                                     '' as Nombremes,
                                     0 as Mes
                                 FROM presupuestocalendarizado pc
-                                WHERE pc.ClavePresupuestal IN @claves
+                                WHERE pc.ClavePresupuestal IN (SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(@claves, ','))
                             ";
-                            resultado.DesgloseClaves = con.Query<ModelClaveRelacionada>(sqlDesglose, new { claves = claves }).ToList();
+                            resultado.DesgloseClaves = con.Query<ModelClaveRelacionada>(sqlDesglose, new { claves = string.Join(",", claves) }).ToList();
                         }
                         else
                         {
@@ -977,7 +978,7 @@ namespace SIAP.Repositories
         {
             try
             {
-                using (var con = new MySqlConnection(connectionString))
+                using (var con = new SqlConnection(connectionString))
                 {
                     var columna = ObtenerNombreColumnaMes(mes);
 
@@ -1120,7 +1121,7 @@ namespace SIAP.Repositories
 
         public int GuardarMinistracion(ModelMinistracionGuardar model)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 con.Open();
                 using (var transaction = con.BeginTransaction())
@@ -1154,7 +1155,7 @@ namespace SIAP.Repositories
                         if (!string.IsNullOrEmpty(primerClave))
                         {
                             var pcId = con.QueryFirstOrDefault<int?>(
-                                "SELECT Id FROM presupuestocalendarizado WHERE ClavePresupuestal = @Clave LIMIT 1",
+                                "SELECT TOP 1 Id FROM presupuestocalendarizado WHERE ClavePresupuestal = @Clave",
                                 new { Clave = primerClave },
                                 transaction: transaction
                             );
@@ -1213,7 +1214,7 @@ namespace SIAP.Repositories
                                 @Concepto, 
                                 @Estatus, 
                                 @UsuarioCreacion, 
-                                NOW(),
+                                GETDATE(),
                                 
                                 -- NUEVOS VALORES
                                 @id_tipoministracion_folio,
@@ -1222,7 +1223,7 @@ namespace SIAP.Repositories
                                 @Id_proyecto_estrategico,
                                 @Id_ramo
                             );
-                            SELECT LAST_INSERT_ID();
+                            SELECT CAST(SCOPE_IDENTITY() AS INT);
                         ";
 
                         var id = con.QueryFirst<int>(sql, new
@@ -1267,7 +1268,7 @@ namespace SIAP.Repositories
                                 Importe_total = @ImporteTotal,
                                 Concepto = @Concepto,
                                 Estatus = @Estatus,
-                                FechaModificacion = NOW(),
+                                FechaModificacion = GETDATE(),
                                 
                                 -- NUEVOS CAMPOS
                                 id_tipoministracion_folio = @id_tipoministracion_folio,
@@ -1316,7 +1317,7 @@ namespace SIAP.Repositories
 
         public bool CancelarMinistracion(int id, string motivo, decimal monto)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 con.Open();
                 using (var transaction = con.BeginTransaction())
@@ -1377,7 +1378,7 @@ namespace SIAP.Repositories
 
         public ModelRecursosPorMesFondo GetRecursosPorMesYFondo(int mes, int programaFondoId)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var sqlFondo = @"
                     SELECT Id, Clave, Descripcion 
@@ -1434,7 +1435,7 @@ namespace SIAP.Repositories
 
         public bool AprobarMinistracion(int id)
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 string sql = "UPDATE ministraciones SET Estatus = 'INICIADO' WHERE Id = @id AND Estatus = 'REGISTRADA'";
                 return con.Execute(sql, new { id }) > 0;
@@ -1447,7 +1448,7 @@ namespace SIAP.Repositories
 
         public ModelEstadisticasMinistraciones GetEstadisticas()
         {
-            using (var con = new MySqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
             {
                 var sql = @"
                     SELECT 

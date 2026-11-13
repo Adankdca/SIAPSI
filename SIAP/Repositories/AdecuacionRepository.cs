@@ -40,7 +40,7 @@ namespace SIAP.Repositories
                             (NumOficio, NumSolicitud, Asunto, TipoAdecuacion, FechaSolicitud, MontoTotal, Estatus, FechaCreacion) 
                             VALUES 
                             (@NumOficio, @NumSolicitud, @Asunto, @TipoAdecuacion, @FechaSolicitud, @MontoTotal, @Estatus, @FechaCreacion);
-                            SELECT LAST_INSERT_ID();";
+                            SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                         adecuacion.FechaCreacion = DateTime.Now;
                         int adecuacionId = db.QuerySingle<int>(sqlCabecera, adecuacion, transaction: transaction);

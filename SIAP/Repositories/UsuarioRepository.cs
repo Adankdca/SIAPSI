@@ -2,7 +2,7 @@ using System;
 using System.Data;
 using System.Linq;
 using Dapper;
-using MySql.Data.MySqlClient;
+using System.Data.SqlClient;
 using SIAP.Models;
 
 namespace SIAP.Repositories
@@ -17,7 +17,7 @@ namespace SIAP.Repositories
 
         private IDbConnection DbConnection
         {
-            get { return new MySqlConnection(_connectionString); }
+            get { return new SqlConnection(_connectionString); }
         }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace SIAP.Repositories
                 // NOTA: Para producción real, se debe usar bcrypt u otro hash fuerte para comparar.
                 // Como es una versión inicial, se asume que passwordHash = password.
                 string query = @"
-                    SELECT 
+                    SELECT TOP 1
                         u.Id, 
                         u.Usuario AS Username, 
                         u.PasswordHash, 
@@ -49,8 +49,7 @@ namespace SIAP.Repositories
                         a.VerCatalogos
                     FROM usuarios u
                     LEFT JOIN usuarios_accesos a ON u.Id = a.UsuarioId
-                    WHERE u.Usuario = @User AND u.PasswordHash = @Pass AND u.Activo = 1
-                    LIMIT 1;
+                    WHERE u.Usuario = @User AND u.PasswordHash = @Pass AND u.Activo = 1;
                 ";
 
                 var user = db.QueryFirstOrDefault<Usuario>(query, new { User = usuario, Pass = password });
@@ -72,7 +71,7 @@ namespace SIAP.Repositories
             {
                 string query = @"
                     INSERT INTO bitacora_logs (UsuarioId, Modulo, Accion, Detalle, Fecha)
-                    VALUES (@User, @Mod, @Accion, @Detalle, NOW());
+                    VALUES (@User, @Mod, @Accion, @Detalle, GETDATE());
                 ";
                 db.Execute(query, new { User = usuarioId, Mod = modulo, Accion = accion, Detalle = detalle });
             }

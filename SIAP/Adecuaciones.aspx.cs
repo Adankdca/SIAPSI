@@ -11,7 +11,6 @@ namespace SIAP
 {
     public partial class Adecuaciones : System.Web.UI.Page
     {
-        Cnn cn;
         protected void Page_Load(object sender, EventArgs e)
         {
             if (Session["UsuarioId"] == null || Session["VerAdecuaciones"] == null || !(bool)Session["VerAdecuaciones"])

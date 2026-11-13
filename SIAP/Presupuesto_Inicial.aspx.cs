@@ -24,7 +24,6 @@ namespace SIAP
 {
     public partial class Presupuesto_Inicial : System.Web.UI.Page
     {
-        Cnn cn;
         protected void Page_Load(object sender, EventArgs e)
         {
             if (Session["UsuarioId"] == null || Session["VerPresupuesto"] == null || !(bool)Session["VerPresupuesto"])

@@ -4,7 +4,7 @@ using System.Configuration;
 using System.Data;
 using System.Linq;
 using Dapper;
-using MySql.Data.MySqlClient;
+using System.Data.SqlClient;
 
 namespace SIAP.Repositories
 {
@@ -20,7 +20,7 @@ namespace SIAP.Repositories
 
     /// <summary>
     /// Repositorio genérico para administrar todas las tablas maestras de catálogos.
-    /// Utiliza reflexión de base de datos (`information_schema`) para descubrir columnas dinámicamente,
+    /// Utiliza las vistas de sistema de SQL Server para descubrir columnas dinámicamente,
     /// lo que permite leer, insertar y actualizar cualquier tabla que comience con 'cat_'.
     /// </summary>
     public class CatalogosRepository
@@ -34,7 +34,7 @@ namespace SIAP.Repositories
 
         private IDbConnection GetConnection()
         {
-            return new MySqlConnection(_connectionString);
+            return new SqlConnection(_connectionString);
         }
 
         /// <summary>
@@ -55,13 +55,18 @@ namespace SIAP.Repositories
         {
             using (var db = GetConnection())
             {
-                return db.Query<string>("SHOW TABLES LIKE 'cat_%'").ToList();
+                // [_] escapa el guion bajo, que en LIKE es comodín
+                return db.Query<string>(@"
+                    SELECT TABLE_NAME
+                    FROM INFORMATION_SCHEMA.TABLES
+                    WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = 'dbo' AND TABLE_NAME LIKE 'cat[_]%'
+                    ORDER BY TABLE_NAME").ToList();
             }
         }
 
         /// <summary>
         /// Obtiene el esquema dinámico de la tabla (Nombres de columnas, Tipos de datos y Llaves).
-        /// Consulta directamente el information_schema de MySQL. 
+        /// Consulta las vistas de sistema de SQL Server (sys.columns, sys.indexes, sys.foreign_key_columns).
         /// Fundamental para que el Front-end sepa qué inputs (texto, número) dibujar en el modal.
         /// </summary>
         public List<ColumnSchema> GetSchema(string tableName)
@@ -70,23 +75,38 @@ namespace SIAP.Repositories
 
             using (var db = GetConnection())
             {
+                // DataType se devuelve con los nombres que usaba MySQL (varchar, tinyint, datetime, text)
+                // para no cambiar el contrato con el front-end.
                 var query = @"
                     SELECT 
-                        c.COLUMN_NAME AS ColumnName,
-                        c.DATA_TYPE AS DataType,
-                        CASE WHEN c.COLUMN_KEY = 'PRI' THEN 1 ELSE 0 END AS IsPrimaryKey,
-                        CASE WHEN k.REFERENCED_TABLE_NAME IS NOT NULL THEN 1 ELSE 0 END AS IsForeignKey,
-                        k.REFERENCED_TABLE_NAME AS ReferencedTable,
-                        k.REFERENCED_COLUMN_NAME AS ReferencedColumn
-                    FROM information_schema.COLUMNS c
-                    LEFT JOIN information_schema.KEY_COLUMN_USAGE k 
-                        ON c.TABLE_NAME = k.TABLE_NAME 
-                        AND c.COLUMN_NAME = k.COLUMN_NAME 
-                        AND c.TABLE_SCHEMA = k.TABLE_SCHEMA 
-                        AND k.REFERENCED_TABLE_NAME IS NOT NULL
-                    WHERE c.TABLE_NAME = @TableName 
-                    AND c.TABLE_SCHEMA = DATABASE()
-                    ORDER BY c.ORDINAL_POSITION;
+                        c.name AS ColumnName,
+                        CASE 
+                            WHEN t.name IN ('nvarchar','varchar') AND c.max_length = -1 THEN 'text'
+                            WHEN t.name = 'nvarchar' THEN 'varchar'
+                            WHEN t.name = 'nchar' THEN 'char'
+                            WHEN t.name = 'bit' THEN 'tinyint'
+                            WHEN t.name IN ('datetime2','smalldatetime') THEN 'datetime'
+                            ELSE t.name
+                        END AS DataType,
+                        CASE WHEN pk.column_id IS NOT NULL THEN 1 ELSE 0 END AS IsPrimaryKey,
+                        CASE WHEN fk.parent_column_id IS NOT NULL THEN 1 ELSE 0 END AS IsForeignKey,
+                        OBJECT_NAME(fk.referenced_object_id) AS ReferencedTable,
+                        COL_NAME(fk.referenced_object_id, fk.referenced_column_id) AS ReferencedColumn
+                    FROM sys.columns c
+                    INNER JOIN sys.types t ON t.user_type_id = c.user_type_id
+                    OUTER APPLY (
+                        SELECT TOP 1 ic.column_id
+                        FROM sys.indexes i
+                        INNER JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+                        WHERE i.object_id = c.object_id AND i.is_primary_key = 1 AND ic.column_id = c.column_id
+                    ) pk
+                    OUTER APPLY (
+                        SELECT TOP 1 fkc.parent_column_id, fkc.referenced_object_id, fkc.referenced_column_id
+                        FROM sys.foreign_key_columns fkc
+                        WHERE fkc.parent_object_id = c.object_id AND fkc.parent_column_id = c.column_id
+                    ) fk
+                    WHERE c.object_id = OBJECT_ID(N'dbo.' + QUOTENAME(@TableName))
+                    ORDER BY c.column_id;
                 ";
                 return db.Query<ColumnSchema>(query, new { TableName = tableName }).ToList();
             }
@@ -99,7 +119,7 @@ namespace SIAP.Repositories
 
             using (var db = GetConnection())
             {
-                return db.Query($"SELECT * FROM {tableName}");
+                return db.Query($"SELECT * FROM [{tableName}]");
             }
         }
 
@@ -130,7 +150,10 @@ namespace SIAP.Repositories
 
             foreach(var col in columnsToSave)
             {
-                parameters.Add("@" + col, data[col]);
+                // Un campo vacío del formulario se guarda como NULL (en SQL Server '' a INT da 0 y rompe las llaves foráneas)
+                var valor = data[col];
+                if (valor is string texto && string.IsNullOrWhiteSpace(texto)) valor = null;
+                parameters.Add("@" + col, valor);
             }
 
             using (var db = GetConnection())
@@ -138,15 +161,15 @@ namespace SIAP.Repositories
                 if (isUpdate)
                 {
                     parameters.Add("@PK", pkValue);
-                    var setClauses = string.Join(", ", columnsToSave.Select(c => $"{c} = @{c}"));
-                    var query = $"UPDATE {tableName} SET {setClauses} WHERE {pkColumn.ColumnName} = @PK";
+                    var setClauses = string.Join(", ", columnsToSave.Select(c => $"[{c}] = @{c}"));
+                    var query = $"UPDATE [{tableName}] SET {setClauses} WHERE [{pkColumn.ColumnName}] = @PK";
                     db.Execute(query, parameters);
                 }
                 else
                 {
-                    var cols = string.Join(", ", columnsToSave);
+                    var cols = string.Join(", ", columnsToSave.Select(c => $"[{c}]"));
                     var vals = string.Join(", ", columnsToSave.Select(c => "@" + c));
-                    var query = $"INSERT INTO {tableName} ({cols}) VALUES ({vals})";
+                    var query = $"INSERT INTO [{tableName}] ({cols}) VALUES ({vals})";
                     db.Execute(query, parameters);
                 }
             }

@@ -20,7 +20,8 @@ namespace SIAP.Controllers
             IEnumerable<Data.Configuracion> list = null;
             using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
             {
-                var sql = "select * from tblc_SIAP_Configuracion where Anio_ejercicio='2022';";
+                // Antes estaba fijo el año '2022'; ahora toma el ejercicio más reciente capturado
+                var sql = "SELECT * FROM tblc_SIAP_Configuracion WHERE Anio_ejercicio = (SELECT MAX(Anio_ejercicio) FROM tblc_SIAP_Configuracion);";
                 list = con.Query<Data.Configuracion>(sql);
             }
             return list.ToArray().ToList();
@@ -33,8 +34,8 @@ namespace SIAP.Controllers
             int result = 0;
             using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
             {
-                var sqlquery = "Update tblc_SIAP_Configuracion set Titular=@Titular where Idconfiguracion=" + id;
-                result = con.Execute(sqlquery, configuracion);
+                var sqlquery = "UPDATE tblc_SIAP_Configuracion SET Titular = @Titular WHERE Idconfiguracion = @Id";
+                result = con.Execute(sqlquery, new { configuracion.Titular, Id = id });
             }
             return Ok(result);
         }
@@ -48,7 +49,7 @@ namespace SIAP.Controllers
             IEnumerable<Data.Firmantes> list = null;
             using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
             {
-                var sql = "select * from tblc_SIAP_Firmantes;";
+                var sql = "SELECT * FROM tblc_SIAP_Firmantes ORDER BY Idfirmante;";
                 list = con.Query<Data.Firmantes>(sql);
             }
             return list.ToArray().ToList();
@@ -64,8 +65,8 @@ namespace SIAP.Controllers
             int result = 0;
             using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
             {
-                var sqlquery = "Update tblc_SIAP_Firmantes set Nombre=@Nombre, Cargo=@Cargo where Idfirmante=" + id;
-                result = con.Execute(sqlquery, firmantes);
+                var sqlquery = "UPDATE tblc_SIAP_Firmantes SET Nombre = @Nombre, Cargo = @Cargo WHERE Idfirmante = @Id";
+                result = con.Execute(sqlquery, new { firmantes.Nombre, firmantes.Cargo, Id = id });
             }
             return Ok(result);
         }
@@ -77,8 +78,8 @@ namespace SIAP.Controllers
             int result = 0;
             using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
             {
-                var sqlquery = "Delete from tblc_SIAP_Firmantes where Idfirmante=" + id;
-                result = con.Execute(sqlquery);
+                var sqlquery = "DELETE FROM tblc_SIAP_Firmantes WHERE Idfirmante = @Id";
+                result = con.Execute(sqlquery, new { Id = id });
             }
             return Ok(result);
         }

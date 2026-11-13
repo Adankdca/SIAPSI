@@ -8,6 +8,7 @@ using System.Web;
 using OfficeOpenXml;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Data.SqlClient;
 
 namespace SIAP.Controllers
 {
@@ -121,7 +122,7 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ConnectionString))
+                using (var conn = new SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ConnectionString))
                 {
                     string sql = "SELECT DISTINCT Nombre FROM cat_municipio WHERE Nombre IS NOT NULL AND Nombre <> ''";
                     if (!string.IsNullOrEmpty(region))
@@ -145,7 +146,7 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ConnectionString))
+                using (var conn = new SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ConnectionString))
                 {
                     var data = Dapper.SqlMapper.Query<string>(conn, "SELECT DISTINCT Descripcion FROM cat_region WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion").ToList();
                     return Ok(data);
@@ -312,124 +313,7 @@ namespace SIAP.Controllers
             }
         }
 
-        [HttpPost]
-        [Route("previewExcel")]
-        public IHttpActionResult PreviewExcel()
-        {
-            try
-            {
-                var httpRequest = HttpContext.Current.Request;
-                if (httpRequest.Files.Count == 0)
-                    return BadRequest("No se recibió ningún archivo.");
 
-                var postedFile = httpRequest.Files[0];
-                var anio = httpRequest.Form["anio"];
-                var oficio = httpRequest.Form["oficio"];
 
-                string ext = Path.GetExtension(postedFile.FileName).ToLower();
-                if (ext != ".xlsx")
-                    return BadRequest("El archivo debe ser formato .xlsx");
-
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-                List<PresupuestoDetalleDto> lista = new List<PresupuestoDetalleDto>();
-
-                using (var package = new ExcelPackage(postedFile.InputStream))
-                {
-                    var worksheet = package.Workbook.Worksheets["MAESTRO"];
-                    if (worksheet == null) return BadRequest("La hoja de Excel debe llamarse 'MAESTRO'.");
-
-                    int rows = worksheet.Dimension.Rows;
-                    int cols = worksheet.Dimension.Columns;
-
-                    var headerMap = new Dictionary<string, int>();
-                    for (int col = 1; col <= cols; col++)
-                    {
-                        string headerName = worksheet.Cells[1, col].Text.Trim().ToLower();
-                        if (!headerMap.ContainsKey(headerName))
-                            headerMap.Add(headerName, col);
-                    }
-
-                    string[] camposObligatorios = {
-                        "claves","ur","uro","fi","fu","sf","ssf","ps","pp","oa","ai","pt",
-                        "mpio","ga","ogc","og","gto","ag","tg","tr","ff","sff","ra",
-                        "pf","ri","cp","dm"
-                    };
-
-                    foreach (var reqCol in camposObligatorios)
-                    {
-                        if (!headerMap.ContainsKey(reqCol))
-                            return BadRequest($"No se encontró la columna obligatoria '{reqCol}'.");
-                    }
-
-                    for (int row = 2; row <= rows; row++)
-                    {
-                        var claveVal = worksheet.Cells[row, headerMap["claves"]].Text.Trim();
-                        if (string.IsNullOrEmpty(claveVal)) continue;
-                        if (claveVal.Length != 56) return BadRequest($"Error en fila {row}: La clave debe tener 56 dígitos (Tiene {claveVal.Length}). Clave: {claveVal}");
-
-                        var item = new PresupuestoDetalleDto { ClavePresupuestal = claveVal };
-                        
-                        item.Aprobado = LeerDecimal(worksheet, row, "aprobado", headerMap);
-                        item.Enero = LeerDecimal(worksheet, row, "enero", headerMap);
-                        item.Febrero = LeerDecimal(worksheet, row, "febrero", headerMap);
-                        item.Marzo = LeerDecimal(worksheet, row, "marzo", headerMap);
-                        item.Abril = LeerDecimal(worksheet, row, "abril", headerMap);
-                        item.Mayo = LeerDecimal(worksheet, row, "mayo", headerMap);
-                        item.Junio = LeerDecimal(worksheet, row, "junio", headerMap);
-                        item.Julio = LeerDecimal(worksheet, row, "julio", headerMap);
-                        item.Agosto = LeerDecimal(worksheet, row, "agosto", headerMap);
-                        item.Septiembre = LeerDecimal(worksheet, row, "septiembre", headerMap);
-                        item.Octubre = LeerDecimal(worksheet, row, "octubre", headerMap);
-                        item.Noviembre = LeerDecimal(worksheet, row, "noviembre", headerMap);
-                        item.Diciembre = LeerDecimal(worksheet, row, "diciembre", headerMap);
-                        
-                        lista.Add(item);
-                    }
-                }
-
-                return Ok(lista);
-            }
-            catch (Exception ex)
-            {
-                return InternalServerError(ex);
-            }
-        }
-
-        private decimal LeerDecimal(ExcelWorksheet worksheet, int row, string colName, Dictionary<string, int> headerMap)
-        {
-            if (!headerMap.ContainsKey(colName)) return 0m;
-            int col = headerMap[colName];
-            string val = worksheet.Cells[row, col].Text.Trim();
-            if (string.IsNullOrEmpty(val)) return 0m;
-            if (double.TryParse(val, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double temp))
-            {
-                if (Math.Abs(temp) < 0.000001) return 0m;
-                return Math.Round((decimal)temp, 2);
-            }
-            return 0m;
-        }
-
-        [HttpPost]
-        [Route("saveMasivo")]
-        public IHttpActionResult SaveMasivoExcel([FromBody] CargaMasivaDto req)
-        {
-            try
-            {
-                if (req == null || req.Claves == null || req.Claves.Count == 0)
-                    return BadRequest("No hay datos para guardar.");
-                
-                var session = System.Web.HttpContext.Current?.Session;
-                string usuariocreo = session != null && session["UsuarioId"] != null ? session["UsuarioId"].ToString() : "0";
-
-                _repository.InsertarPresupuestoMasivo(req, usuariocreo);
-                
-                RegistrarLog("CargaMasiva", $"Se cargaron {req.Claves.Count} claves. Oficio: {req.Oficio}, Año: {req.Anio}");
-                return Ok(new { success = true });
-            }
-            catch (Exception ex)
-            {
-                return InternalServerError(ex);
-            }
-        }
     }
 }

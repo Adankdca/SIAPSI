@@ -202,9 +202,9 @@
                           </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                          <button class="nav-link mb-0 px-5 py-2 font-weight-bold" id="pills-excel-tab" data-bs-toggle="pill" data-bs-target="#pills-excel" type="button" role="tab" style="border-radius: 0.5rem; transition: all 0.3s ease;">
+                          <a class="nav-link mb-0 px-5 py-2 font-weight-bold" href="PresupuestoInicial.aspx" style="border-radius: 0.5rem;">
                               <i class="fa-solid fa-file-excel me-2"></i>Carga Masiva (Excel)
-                          </button>
+                          </a>
                         </li>
                       </ul>
                       
@@ -228,7 +228,7 @@
                                   <div class="col-md-8 mb-3">
                                       <label class="form-control-label">Clave Presupuestal (Cadena Completa)</label>
                                       <div class="input-group">
-                                          <input type="text" id="txtClaveManual" class="form-control" placeholder="Ingrese los 56 dígitos de la clave" maxlength="56" onkeyup="sincronizarSegmentos()" />
+                                          <input type="text" id="txtClaveManual" class="form-control" placeholder="Ingrese los dígitos de la clave" maxlength="70" onkeyup="sincronizarSegmentos()" />
                                           <button class="btn btn-primary mb-0 bg-gradient-primary" type="button" onclick="decodificarClaveManual()"><i class="fa fa-search"></i> Decodificar</button>
                                       </div>
                                   </div>
@@ -267,70 +267,7 @@
                               </div>
                           </div>
                           
-                          <!-- SECCION EXCEL AJAX -->
-                          <div class="tab-pane fade" id="pills-excel" role="tabpanel">
-                                      <h5 class="mb-4 text-primary">Cargar Archivo de Presupuesto Inicial</h5>
-                                      <p class="text-sm text-muted">Sube tu archivo de Excel (.xlsx) con la pestaña MAESTRO. Podrás revisar y editar los montos principales antes de guardarlos en la base de datos.</p>
-                                      
-                                      <div class="row align-items-end mb-4" id="seccionUploadExcel">
-                                          <div class="col-md-2 mb-3">
-                                              <label class="form-control-label">A&ntilde;o</label>
-                                              <select id="cboanioExcel" class="form-select"></select>    
-                                          </div>
-                                          <div class="col-md-3 mb-3">
-                                              <label class="form-control-label">N&uacute;mero de Oficio</label>
-                                              <input type="text" id="txtoficioExcel" placeholder="Ej. OF-2026-001" class="form-control" />
-                                          </div>
-                                          <div class="col-md-4 mb-3">
-                                              <label class="form-control-label">Seleccione Archivo (Excel)</label>
-                                              <input type="file" id="fileUploadExcelAjax" class="form-control" accept=".xls,.xlsx" />
-                                          </div>
-                                          <div class="col-md-3 mb-3">
-                                              <button type="button" class="btn btn-primary w-100 mb-0" onclick="uploadPreviewExcel()">
-                                                  <i class="fa-solid fa-eye me-2"></i> Procesar y Revisar
-                                              </button>
-                                          </div>
-                                      </div>
-
-                                      <!-- Vista Previa de Excel -->
-                                      <div id="seccionPreviewExcel" style="display: none;">
-                                          <hr class="horizontal dark my-4">
-                                          <div class="d-flex justify-content-between align-items-center mb-3">
-                                              <h6 class="text-uppercase text-muted text-xs font-weight-bolder mb-0">Vista Previa de Datos a Guardar (<span id="countFilasPreview">0</span> filas)</h6>
-                                              <div>
-                                                  <button type="button" class="btn btn-outline-secondary btn-sm mb-0 me-2" onclick="cancelarExcel()">Cancelar</button>
-                                                  <button type="button" class="btn btn-success btn-sm mb-0" onclick="guardarMasivoExcel()">
-                                                      <i class="fa fa-save me-1"></i> Confirmar y Guardar Todo
-                                                  </button>
-                                              </div>
-                                          </div>
-                                          
-                                          <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-                                              <table id="tblPreviewExcel" class="table align-items-center table-bordered mb-0 w-100" style="font-size: 0.8rem;">
-                                                  <thead class="bg-light sticky-top">
-                                                      <tr>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">#</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="min-width: 400px;">Clave Presupuestal</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aprobado</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Enero</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Febrero</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Marzo</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Abril</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Mayo</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Junio</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Julio</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Agosto</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Septiembre</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Octubre</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Noviembre</th>
-                                                          <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Diciembre</th>
-                                                      </tr>
-                                                  </thead>
-                                                  <tbody id="tbodyPreviewExcel"></tbody>
-                                              </table>
-                                          </div>
-                                      </div>
-                          </div>
+                          <!-- La carga masiva por Excel está en PresupuestoInicial.aspx -->
                       </div>
                   </div>
 
@@ -389,13 +326,6 @@
         ];
 
         $(document).ready(function () {
-            // Llenar cboanioExcel
-            var anioActual = new Date().getFullYear();
-            var cbo = $('#cboanioExcel');
-            cbo.append(new Option(anioActual - 1, anioActual - 1));
-            cbo.append(new Option(anioActual, anioActual));
-            cbo.append(new Option(anioActual + 1, anioActual + 1));
-            cbo.val(anioActual);
 
             // Generar los inputs segmentados
             let htmlSegmentos = '';
@@ -618,7 +548,7 @@
         function decodificarClaveManual() {
             let clave = $('#txtClaveManual').val();
             // Permitiendo longitud variable por ahora para adaptarse a los 58 caracteres
-            if (clave.length < 56) {
+            if (clave.length < 44) {
                 swal.fire('Atención', 'La clave parece estar incompleta.', 'warning');
                 return;
             }
@@ -655,7 +585,7 @@
             let clave = $('#txtClaveManual').val();
             let aprobado = parseFloat($('#txtAprobadoManual').val()) || 0;
             
-            if (clave.length < 56) {
+            if (clave.length < 44) {
                 swal.fire('Error', 'La clave está incompleta.', 'error');
                 return;
             }
@@ -690,139 +620,6 @@
                 },
                 error: function(err) {
                     swal.fire('Error', 'No se pudo guardar la clave. Es posible que ya exista.', 'error');
-                }
-            });
-        }
-        var datosExcelPreview = []; // Variable global para almacenar el JSON extraído
-
-        function uploadPreviewExcel() {
-            var fileUpload = document.getElementById("fileUploadExcelAjax");
-            if (fileUpload.files.length === 0) {
-                swal.fire('Atención', 'Seleccione un archivo Excel.', 'warning');
-                return;
-            }
-            var anio = $('#cboanioExcel').val();
-            var oficio = $('#txtoficioExcel').val();
-            if (!oficio) {
-                swal.fire('Atención', 'Ingrese el número de oficio.', 'warning');
-                return;
-            }
-
-            var formData = new FormData();
-            formData.append("file", fileUpload.files[0]);
-            formData.append("anio", anio);
-            formData.append("oficio", oficio);
-
-            swal.fire({ title: 'Procesando...', text: 'Leyendo archivo Excel, esto puede tomar unos segundos.', allowOutsideClick: false, onBeforeOpen: () => { swal.showLoading(); } });
-
-            $.ajax({
-                url: '/api/presupuesto/previewExcel',
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function (res) {
-                    swal.close();
-                    if (res && res.length > 0) {
-                        datosExcelPreview = res;
-                        $('#countFilasPreview').text(res.length);
-                        renderTablaPreview(res);
-                        $('#seccionUploadExcel').hide();
-                        $('#seccionPreviewExcel').fadeIn();
-                    } else {
-                        swal.fire('Aviso', 'El archivo no contiene datos válidos.', 'info');
-                    }
-                },
-                error: function (err) {
-                    var msg = err.responseJSON && err.responseJSON.Message ? err.responseJSON.Message : 'Error al procesar el archivo.';
-                    swal.fire('Error', msg, 'error');
-                }
-            });
-        }
-
-        function renderTablaPreview(data) {
-            const formater = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-            var html = '';
-            for (var i = 0; i < data.length; i++) {
-                var item = data[i];
-                html += '<tr>' +
-                            '<td class="text-sm">' + (i + 1) + '</td>' +
-                            '<td class="text-sm font-weight-bold">' + item.ClavePresupuestal + '</td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Aprobado" value="' + item.Aprobado + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Enero" value="' + item.Enero + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Febrero" value="' + item.Febrero + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Marzo" value="' + item.Marzo + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Abril" value="' + item.Abril + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Mayo" value="' + item.Mayo + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Junio" value="' + item.Junio + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Julio" value="' + item.Julio + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Agosto" value="' + item.Agosto + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Septiembre" value="' + item.Septiembre + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Octubre" value="' + item.Octubre + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Noviembre" value="' + item.Noviembre + '" style="min-width: 100px;"></td>' +
-                            '<td class="text-sm"><input type="number" class="form-control form-control-sm text-end input-monto" data-index="' + i + '" data-field="Diciembre" value="' + item.Diciembre + '" style="min-width: 100px;"></td>' +
-                        '</tr>';
-            }
-            $('#tbodyPreviewExcel').html(html);
-
-            // Escuchar cambios en los inputs para actualizar el JSON en memoria
-            $('.input-monto').on('change', function() {
-                var index = $(this).data('index');
-                var field = $(this).data('field');
-                var val = parseFloat($(this).val()) || 0;
-                datosExcelPreview[index][field] = val;
-            });
-        }
-
-        function cancelarExcel() {
-            $('#seccionPreviewExcel').hide();
-            $('#seccionUploadExcel').fadeIn();
-            datosExcelPreview = [];
-            $('#tbodyPreviewExcel').empty();
-            $('#fileUploadExcelAjax').val('');
-        }
-
-        function guardarMasivoExcel() {
-            if (!datosExcelPreview || datosExcelPreview.length === 0) {
-                swal.fire('Atención', 'No hay datos para guardar.', 'warning');
-                return;
-            }
-
-            swal.fire({
-                title: '¿Confirmar Guardado?',
-                text: "Se insertarán " + datosExcelPreview.length + " claves al presupuesto.",
-                type: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Sí, guardar'
-            }).then((result) => {
-                if (result.value) {
-                    swal.fire({ title: 'Guardando...', text: 'Por favor espere.', allowOutsideClick: false, onBeforeOpen: () => { swal.showLoading(); } });
-                    
-                    var payload = {
-                        anio: $('#cboanioExcel').val(),
-                        oficio: $('#txtoficioExcel').val(),
-                        claves: datosExcelPreview
-                    };
-
-                    $.ajax({
-                        url: '/api/presupuesto/saveMasivo',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(payload),
-                        success: function () {
-                            swal.fire('¡Éxito!', 'Presupuesto guardado correctamente.', 'success').then(() => {
-                                cancelarExcel();
-                                $('#tablaPresupuesto').DataTable().ajax.reload();
-                                $('#pills-manual-tab').click(); // Volver a la pestaña principal
-                            });
-                        },
-                        error: function (err) {
-                            var msg = err.responseJSON && err.responseJSON.Message ? err.responseJSON.Message : 'Ocurrió un error al guardar.';
-                            swal.fire('Error', msg, 'error');
-                        }
-                    });
                 }
             });
         }

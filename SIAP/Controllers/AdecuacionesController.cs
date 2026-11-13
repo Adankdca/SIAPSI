@@ -48,11 +48,11 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     string sql = @"
                         SELECT 
-                            CAST(MIN(Id) AS CHAR) as numsolicitud,
+                            CAST(MIN(Id) AS VARCHAR(20)) as numsolicitud,
                             NumOficio as oficionumero,
                             MAX(CASE 
                                 WHEN NumOficio LIKE '%ET%' THEN 'TRASPASO'
@@ -60,9 +60,9 @@ namespace SIAP.Controllers
                                 WHEN NumOficio LIKE '%ER%' THEN 'REDUCCION'
                                 ELSE 'Varios'
                             END) as tipoadecuacion,
-                            COALESCE(MAX(FechaSolicitud), CAST('0001-01-01' AS DATETIME)) as fechasolicitud,
-                            IFNULL(SUM(MontoTotal), 0) as montoadecuacion,
-                            IFNULL(SUM(MontoTotal), 0) as receptor,
+                            COALESCE(MAX(FechaSolicitud), CAST('0001-01-01' AS DATETIME2)) as fechasolicitud,
+                            ISNULL(SUM(MontoTotal), 0) as montoadecuacion,
+                            ISNULL(SUM(MontoTotal), 0) as receptor,
                             CAST(0 AS DECIMAL) as emisor,
                             'Varios' as estatus
                         FROM adecuaciones
@@ -79,18 +79,6 @@ namespace SIAP.Controllers
             }
         }
         
-        [HttpGet]
-        [Route("api/Adecuaciones/DeleteDebug")]
-        public IHttpActionResult DeleteDebug()
-        {
-            using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
-            {
-                conn.Open();
-                conn.Execute("DELETE FROM adecuacionmovimientos WHERE AdecuacionId IN (SELECT Id FROM adecuaciones WHERE NumOficio = '21111206EA10009')");
-                conn.Execute("DELETE FROM adecuaciones WHERE NumOficio = '21111206EA10009'");
-                return Ok("Deleted.");
-            }
-        }
 
         [HttpGet]
         [Route("api/Adecuaciones/Paginado")]
@@ -122,7 +110,7 @@ namespace SIAP.Controllers
                 if(string.IsNullOrEmpty(mes)) mes = queryParams.FirstOrDefault(q => q.Key == "mes").Value ?? "";
                 if(string.IsNullOrEmpty(anio)) anio = queryParams.FirstOrDefault(q => q.Key == "anio").Value ?? "";
 
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     List<string> conditions = new List<string>();
                     var p = new DynamicParameters();
@@ -161,12 +149,15 @@ namespace SIAP.Controllers
                     string sqlFiltered = $"SELECT COUNT(DISTINCT COALESCE(NumSolicitud, NumOficio)) FROM adecuaciones {searchCondition}";
                     int recordsFiltered = conditions.Count == 0 ? recordsTotal : conn.ExecuteScalar<int>(sqlFiltered, p);
 
+                    // DataTables manda length = -1 para "Todos"; FETCH NEXT no acepta valores <= 0
+                    if (start < 0) start = 0;
+                    if (length <= 0) length = int.MaxValue;
                     p.Add("@length", length);
                     p.Add("@start", start);
 
                     string sql = $@"
                         SELECT 
-                            CAST(MIN(Id) AS CHAR) as numsolicitud,
+                            CAST(MIN(Id) AS VARCHAR(20)) as numsolicitud,
                             COALESCE(NumSolicitud, NumOficio) as oficionumero,
                             MAX(CASE 
                                 WHEN COALESCE(NumSolicitud, NumOficio) LIKE '%ET%' THEN 'TRASPASO'
@@ -174,16 +165,16 @@ namespace SIAP.Controllers
                                 WHEN COALESCE(NumSolicitud, NumOficio) LIKE '%ER%' THEN 'REDUCCION'
                                 ELSE 'Varios'
                             END) as tipoadecuacion,
-                            COALESCE(MAX(FechaSolicitud), CAST('0001-01-01' AS DATETIME)) as fechasolicitud,
-                            IFNULL(SUM(MontoTotal), 0) as montoadecuacion,
-                            IFNULL(SUM(MontoTotal), 0) as receptor,
+                            COALESCE(MAX(FechaSolicitud), CAST('0001-01-01' AS DATETIME2)) as fechasolicitud,
+                            ISNULL(SUM(MontoTotal), 0) as montoadecuacion,
+                            ISNULL(SUM(MontoTotal), 0) as receptor,
                             CAST(0 AS DECIMAL) as emisor,
                             'Varios' as estatus
                         FROM adecuaciones
                         {searchCondition}
                         GROUP BY COALESCE(NumSolicitud, NumOficio)
                         ORDER BY MAX(Id) DESC
-                        LIMIT @length OFFSET @start";
+                        OFFSET @start ROWS FETCH NEXT @length ROWS ONLY";
                     
                     var data = conn.Query<Adecuacion>(sql, p).ToList();
 
@@ -207,7 +198,7 @@ namespace SIAP.Controllers
         public IHttpActionResult GetFiltroSolicitudes()
         {
             try {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     var data = conn.Query("SELECT DISTINCT COALESCE(NumSolicitud, NumOficio) as value, COALESCE(NumSolicitud, NumOficio) as text FROM adecuaciones WHERE COALESCE(NumSolicitud, NumOficio) IS NOT NULL AND COALESCE(NumSolicitud, NumOficio) <> '' ORDER BY 1 DESC").ToList();
                     return Ok(data);
@@ -220,7 +211,7 @@ namespace SIAP.Controllers
         public IHttpActionResult GetFiltroTipos()
         {
             try {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     var data = conn.Query("SELECT DISTINCT TipoAdecuacion as value, TipoAdecuacion as text FROM adecuaciones WHERE TipoAdecuacion IS NOT NULL AND TipoAdecuacion <> '' ORDER BY 1").ToList();
                     return Ok(data);
@@ -233,7 +224,7 @@ namespace SIAP.Controllers
         public IHttpActionResult GetFiltroMeses()
         {
             try {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     var data = conn.Query("SELECT DISTINCT MONTH(FechaSolicitud) as value FROM adecuaciones WHERE FechaSolicitud IS NOT NULL ORDER BY 1").ToList();
                     return Ok(data);
@@ -246,7 +237,7 @@ namespace SIAP.Controllers
         public IHttpActionResult GetFiltroAnios()
         {
             try {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     var data = conn.Query("SELECT DISTINCT YEAR(FechaSolicitud) as value FROM adecuaciones WHERE FechaSolicitud IS NOT NULL ORDER BY 1 DESC").ToList();
                     return Ok(data);
@@ -260,7 +251,7 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     // Necesitamos decodificar la URL porque el oficio trae diagonales como "2024/001"
                     string decodedOficio = System.Net.WebUtility.UrlDecode(numOficio);
@@ -276,7 +267,7 @@ namespace SIAP.Controllers
                             a.Autoriza as autoriza,
                             m.ClavePresupuestal as clave,
                             m.TipoOperacion as tipooperacion,
-                            (IFNULL(m.Enero, 0) + IFNULL(m.Febrero, 0) + IFNULL(m.Marzo, 0) + IFNULL(m.Abril, 0) + IFNULL(m.Mayo, 0) + IFNULL(m.Junio, 0) + IFNULL(m.Julio, 0) + IFNULL(m.Agosto, 0) + IFNULL(m.Septiembre, 0) + IFNULL(m.Octubre, 0) + IFNULL(m.Noviembre, 0) + IFNULL(m.Diciembre, 0)) as montoadecuacion
+                            (ISNULL(m.Enero, 0) + ISNULL(m.Febrero, 0) + ISNULL(m.Marzo, 0) + ISNULL(m.Abril, 0) + ISNULL(m.Mayo, 0) + ISNULL(m.Junio, 0) + ISNULL(m.Julio, 0) + ISNULL(m.Agosto, 0) + ISNULL(m.Septiembre, 0) + ISNULL(m.Octubre, 0) + ISNULL(m.Noviembre, 0) + ISNULL(m.Diciembre, 0)) as montoadecuacion
                         FROM adecuaciones a
                         LEFT JOIN adecuacionmovimientos m ON a.Id = m.AdecuacionId
                         WHERE COALESCE(a.NumSolicitud, a.NumOficio) = @decodedOficio
@@ -307,7 +298,7 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     string sql = @"
                         SELECT 
@@ -319,8 +310,8 @@ namespace SIAP.Controllers
                                 ELSE m.TipoOperacion 
                             END as TipoOperacion,
                             ClavePresupuestal,
-                            (IFNULL(m.Enero, 0) + IFNULL(m.Febrero, 0) + IFNULL(m.Marzo, 0) + IFNULL(m.Abril, 0) + IFNULL(m.Mayo, 0) + IFNULL(m.Junio, 0) + IFNULL(m.Julio, 0) + IFNULL(m.Agosto, 0) + IFNULL(m.Septiembre, 0) + IFNULL(m.Octubre, 0) + IFNULL(m.Noviembre, 0) + IFNULL(m.Diciembre, 0)) as Total,
-                            IFNULL(m.Enero,0) as Enero, IFNULL(m.Febrero,0) as Febrero, IFNULL(m.Marzo,0) as Marzo, IFNULL(m.Abril,0) as Abril, IFNULL(m.Mayo,0) as Mayo, IFNULL(m.Junio,0) as Junio, IFNULL(m.Julio,0) as Julio, IFNULL(m.Agosto,0) as Agosto, IFNULL(m.Septiembre,0) as Septiembre, IFNULL(m.Octubre,0) as Octubre, IFNULL(m.Noviembre,0) as Noviembre, IFNULL(m.Diciembre,0) as Diciembre
+                            (ISNULL(m.Enero, 0) + ISNULL(m.Febrero, 0) + ISNULL(m.Marzo, 0) + ISNULL(m.Abril, 0) + ISNULL(m.Mayo, 0) + ISNULL(m.Junio, 0) + ISNULL(m.Julio, 0) + ISNULL(m.Agosto, 0) + ISNULL(m.Septiembre, 0) + ISNULL(m.Octubre, 0) + ISNULL(m.Noviembre, 0) + ISNULL(m.Diciembre, 0)) as Total,
+                            ISNULL(m.Enero,0) as Enero, ISNULL(m.Febrero,0) as Febrero, ISNULL(m.Marzo,0) as Marzo, ISNULL(m.Abril,0) as Abril, ISNULL(m.Mayo,0) as Mayo, ISNULL(m.Junio,0) as Junio, ISNULL(m.Julio,0) as Julio, ISNULL(m.Agosto,0) as Agosto, ISNULL(m.Septiembre,0) as Septiembre, ISNULL(m.Octubre,0) as Octubre, ISNULL(m.Noviembre,0) as Noviembre, ISNULL(m.Diciembre,0) as Diciembre
                         FROM adecuacionmovimientos m
                         LEFT JOIN cat_tipoadecuacion c ON m.TipoOperacion = c.Clave
                         WHERE m.AdecuacionId = @id";
@@ -341,7 +332,7 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     string sql = "SELECT Clave as idtipoadecuacion, Descripcion as nombre FROM cat_tipoadecuacion ORDER BY Clave";
                     var data = conn.Query(sql).ToList();
@@ -360,7 +351,7 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     string sql = "SELECT Id, Monto, Oficio, FechaApartado FROM apartados_presupuesto WHERE Id = @id";
                     var data = conn.QueryFirstOrDefault(sql, new { id });
@@ -380,7 +371,7 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     string sql = @"
                         SELECT 
@@ -392,7 +383,8 @@ namespace SIAP.Controllers
                                 WHEN c.Descripcion IS NOT NULL THEN c.Descripcion
                                 ELSE m.TipoOperacion 
                             END as TipoOperacion,
-                            IF(IFNULL(m.MontoTotal, 0) > 0, m.MontoTotal, (IFNULL(m.Enero, 0) + IFNULL(m.Febrero, 0) + IFNULL(m.Marzo, 0) + IFNULL(m.Abril, 0) + IFNULL(m.Mayo, 0) + IFNULL(m.Junio, 0) + IFNULL(m.Julio, 0) + IFNULL(m.Agosto, 0) + IFNULL(m.Septiembre, 0) + IFNULL(m.Octubre, 0) + IFNULL(m.Noviembre, 0) + IFNULL(m.Diciembre, 0))) as Total
+                            CASE WHEN ISNULL(m.MontoTotal, 0) > 0 THEN m.MontoTotal
+                                 ELSE (ISNULL(m.Enero, 0) + ISNULL(m.Febrero, 0) + ISNULL(m.Marzo, 0) + ISNULL(m.Abril, 0) + ISNULL(m.Mayo, 0) + ISNULL(m.Junio, 0) + ISNULL(m.Julio, 0) + ISNULL(m.Agosto, 0) + ISNULL(m.Septiembre, 0) + ISNULL(m.Octubre, 0) + ISNULL(m.Noviembre, 0) + ISNULL(m.Diciembre, 0)) END as Total
                         FROM adecuacionmovimientos m
                         INNER JOIN adecuaciones a ON a.Id = m.AdecuacionId
                         LEFT JOIN cat_tipoadecuacion c ON m.TipoOperacion = c.Clave
@@ -415,7 +407,7 @@ namespace SIAP.Controllers
         {
             try
             {
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     string sql = "SELECT COUNT(*) FROM presupuestocalendarizado WHERE ClavePresupuestal = @clave";
                     int count = conn.ExecuteScalar<int>(sql, new { clave });
@@ -441,7 +433,7 @@ namespace SIAP.Controllers
                 }
 
                 var postedFile = httpRequest.Files[0];
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                // Licencia de EPPlus: se declara en Web.config (EPPlus:ExcelPackage:License)
 
                 using (var package = new ExcelPackage(postedFile.InputStream))
                 {
@@ -460,7 +452,7 @@ namespace SIAP.Controllers
 
                     int rowCount = worksheet.Dimension.End.Row;
 
-                    using (var con = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                    using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                     {
                         con.Open();
                         // Iteramos desde la fila 2 asumiendo que la fila 1 tiene encabezados
@@ -481,13 +473,12 @@ namespace SIAP.Controllers
                             
                             string sqlAdecuacion = @"
                                 INSERT INTO adecuaciones (NumOficio, TipoAdecuacion, FechaSolicitud, MontoTotal, Estatus)
-                                SELECT @numsolicitud, 'AMPLIACION', NOW(), 0, 'Procesada'
-                                FROM DUAL
+                                SELECT @numsolicitud, 'AMPLIACION', GETDATE(), 0, 'Procesada'
                                 WHERE NOT EXISTS (
                                     SELECT 1 FROM adecuaciones WHERE NumOficio = @numsolicitud
                                 )";
                                 
-                            using (var cmdAdec = new MySql.Data.MySqlClient.MySqlCommand(sqlAdecuacion, con))
+                            using (var cmdAdec = new SqlCommand(sqlAdecuacion, con))
                             {
                                 cmdAdec.Parameters.AddWithValue("@numsolicitud", adecuacion);
                                 cmdAdec.ExecuteNonQuery();
@@ -529,7 +520,7 @@ namespace SIAP.Controllers
                     return Json(new { success = false, message = "Datos inválidos o sin movimientos." });
                 }
 
-                using (var conn = new MySql.Data.MySqlClient.MySqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
+                using (var conn = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
                 {
                     conn.Open();
                     using (var transaction = conn.BeginTransaction())
@@ -541,8 +532,8 @@ namespace SIAP.Controllers
                                 INSERT INTO adecuaciones 
                                 (NumOficio, NumSolicitud, Asunto, TipoAdecuacion, FechaSolicitud, MontoTotal, Estatus, FechaCreacion, TipoAdecuacionId, ApartadoId, Solicita, Autoriza) 
                                 VALUES 
-                                (@NumOficio, @NumSolicitud, @Asunto, @TipoAdecuacion, @FechaSolicitud, @MontoTotal, @Estatus, NOW(), @TipoAdecuacionId, @ApartadoId, @Solicita, @Autoriza);
-                                SELECT LAST_INSERT_ID();";
+                                (@NumOficio, @NumSolicitud, @Asunto, @TipoAdecuacion, @FechaSolicitud, @MontoTotal, @Estatus, GETDATE(), @TipoAdecuacionId, @ApartadoId, @Solicita, @Autoriza);
+                                SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                             int adecuacionId = conn.QuerySingle<int>(sqlAdec, new
                             {
@@ -560,8 +551,8 @@ namespace SIAP.Controllers
                             }, transaction);
 
                             // 2. Insertar movimientos
-                            string sqlCheckClave = "SELECT Id FROM presupuestocalendarizado WHERE ClavePresupuestal = @ClavePresupuestal LIMIT 1";
-                            string sqlInsertClave = "INSERT INTO presupuestocalendarizado (ClavePresupuestal) VALUES (@ClavePresupuestal); SELECT LAST_INSERT_ID();";
+                            string sqlCheckClave = "SELECT TOP 1 Id FROM presupuestocalendarizado WHERE ClavePresupuestal = @ClavePresupuestal";
+                            string sqlInsertClave = "INSERT INTO presupuestocalendarizado (ClavePresupuestal) VALUES (@ClavePresupuestal); SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                             string sqlMovs = @"
                                 INSERT INTO adecuacionmovimientos 
@@ -825,28 +816,6 @@ namespace SIAP.Controllers
             list.Add(new Mes { numeromes = 1, nombremes = "ENERO" });
             list.Add(new Mes { numeromes = 2, nombremes = "FEBRERO" });
             return list;
-        }
-    }
-    public class EliminarAdecController : ApiController
-    {
-        //------------- Eliminar Adecuación ---------------
-        public string eliminarAdec(string numsolicitud)
-        {
-            string resultado = "Adecuación Eliminada con Éxito";
-            //string numsolicitud = "solicitud001";
-            using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ToString()))
-            {
-                using (SqlCommand cmd = new SqlCommand("Delete_PRE_Adecuacion", con))
-                {
-                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
-                    cmd.Parameters.Add(new SqlParameter("@numerosolicitud", numsolicitud));
-                    //var response = new List<Adecuacion>();
-                    con.Open();
-                    var reader = cmd.ExecuteReader();
-
-                    return resultado;
-                }
-            }
         }
     }
 }

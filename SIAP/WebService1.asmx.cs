@@ -21,7 +21,6 @@ namespace SIAP
     [System.Web.Script.Services.ScriptService]
     public class WebService1 : System.Web.Services.WebService
     {
-        Cnn cn;
         Controlador cnx = new Controlador();
         [WebMethod]
         public string HelloWorld()
@@ -68,24 +67,24 @@ namespace SIAP
             List<string> result = new List<string>();
             string connString = System.Configuration.ConfigurationManager.ConnectionStrings["BDLOCALConnectionString"].ConnectionString;
             
-            using (var con = new MySql.Data.MySqlClient.MySqlConnection(connString))
+            using (var con = new SqlConnection(connString))
             {
                 string Ssql = "";
                 if (prefix != "")
                 {
                     if (idtipo.ToString().Trim() == "NU")
                     {
-                        Ssql = " SELECT distinct ClavePresupuestal as cve FROM presupuestocalendarizado WHERE ClavePresupuestal LIKE CONCAT('%', @SearchText, '%') LIMIT 20";
+                        Ssql = " SELECT DISTINCT TOP 20 ClavePresupuestal as cve FROM presupuestocalendarizado WHERE ClavePresupuestal LIKE '%' + @SearchText + '%'";
                     }
                     if (idtipo.ToString().Trim() == "EX")
                     {
-                        Ssql = " SELECT distinct ClavePresupuestal as cve FROM presupuestocalendarizado WHERE ClavePresupuestal LIKE CONCAT('%', @SearchText, '%') LIMIT 20";
+                        Ssql = " SELECT DISTINCT TOP 20 ClavePresupuestal as cve FROM presupuestocalendarizado WHERE ClavePresupuestal LIKE '%' + @SearchText + '%'";
                     }
                 }
 
                 if (!string.IsNullOrEmpty(Ssql))
                 {
-                    using (var cmd = new MySql.Data.MySqlClient.MySqlCommand(Ssql, con))
+                    using (var cmd = new SqlCommand(Ssql, con))
                     {
                         con.Open();
                         cmd.Parameters.AddWithValue("@SearchText", prefix);

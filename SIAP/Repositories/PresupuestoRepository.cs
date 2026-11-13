@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using Dapper;
-using MySql.Data.MySqlClient;
+using System.Data.SqlClient;
 using SIAP.Models;
 
 namespace SIAP.Repositories
@@ -14,12 +14,12 @@ namespace SIAP.Repositories
 
         private IDbConnection DbConnection
         {
-            get { return new MySqlConnection(_connectionString); }
+            get { return new SqlConnection(_connectionString); }
         }
 
         /// <summary>
         /// Obtiene todos los registros de la matriz de presupuesto para el ejercicio actual.
-        /// Realiza subconsultas con 'LIMIT 1' a catálogos asociados a los segmentos de la Clave Presupuestal 
+        /// Realiza subconsultas con 'TOP 1' a catálogos asociados a los segmentos de la Clave Presupuestal 
         /// (como UR, Programa, Objeto de Gasto, Municipio y Región) para enriquecer la respuesta, evitando filas duplicadas en caso de catálogos sucios.
         /// También calcula si una clave está calendarizada sumando los meses, y obtiene el saldo disponible en los apartados activos de los últimos 7 días.
         /// </summary>
@@ -39,23 +39,23 @@ namespace SIAP.Repositories
                 }
                 catch { }
 
-                // Usamos subconsultas con LIMIT 1 para evitar filas duplicadas en caso de catálogos sucios
+                // Usamos subconsultas con TOP 1 para evitar filas duplicadas en caso de catálogos sucios
                 string query = $@"
                     SELECT 
                         p.Id, 
                         p.ClavePresupuestal,
-                        (SELECT Descripcion FROM cat_ur WHERE Clave = SUBSTRING(p.ClavePresupuestal, 1, 2) LIMIT 1) AS UrDescripcion,
-                        (SELECT Descripcion FROM cat_programapresupuestario WHERE Clave = SUBSTRING(p.ClavePresupuestal, 11, 3) LIMIT 1) AS ProgramaDescripcion,
-                        (SELECT Descripcion FROM cat_objetogastointegrar WHERE Clave = SUBSTRING(p.ClavePresupuestal, 29, 5) LIMIT 1) AS ObjetoGastoDescripcion,
+                        (SELECT TOP 1 Descripcion FROM cat_ur WHERE Clave = SUBSTRING(p.ClavePresupuestal, 1, 2)) AS UrDescripcion,
+                        (SELECT TOP 1 Descripcion FROM cat_programapresupuestario WHERE Clave = SUBSTRING(p.ClavePresupuestal, 11, 3)) AS ProgramaDescripcion,
+                        (SELECT TOP 1 Descripcion FROM cat_objetogastointegrar WHERE Clave = SUBSTRING(p.ClavePresupuestal, 29, 5)) AS ObjetoGastoDescripcion,
                         p.Aprobado,
-                         (IFNULL(p.Aprobado, 0) + IFNULL(p.Aumentos, 0) - IFNULL(p.Disminuciones, 0)) AS Modificado,
+                         (ISNULL(p.Aprobado, 0) + ISNULL(p.Aumentos, 0) - ISNULL(p.Disminuciones, 0)) AS Modificado,
                         p.Pagado,
                         p.Pagado AS Ministerio,
-                        (SELECT IFNULL(SUM(Monto), 0) FROM apartados_presupuesto a WHERE a.ClavePresupuestal = p.ClavePresupuestal AND a.Activo = 1 AND a.FechaApartado >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS SaldoApartado,
+                        (SELECT ISNULL(SUM(Monto), 0) FROM apartados_presupuesto a WHERE a.ClavePresupuestal = p.ClavePresupuestal AND a.Activo = 1 AND a.FechaApartado >= DATEADD(DAY, -7, GETDATE())) AS SaldoApartado,
                         CASE WHEN (p.Enero + p.Febrero + p.Marzo + p.Abril + p.Mayo + p.Junio + p.Julio + p.Agosto + p.Septiembre + p.Octubre + p.Noviembre + p.Diciembre) > 0 THEN 1 ELSE 0 END AS EsCalendarizada,
                         SUBSTRING(p.ClavePresupuestal, 23, 3) AS ClaveMunicipio,
-                        (SELECT Nombre FROM cat_municipio WHERE Clave = SUBSTRING(p.ClavePresupuestal, 23, 3) LIMIT 1) AS NombreMunicipio,
-                        (SELECT r.Descripcion FROM cat_region r JOIN cat_municipio m ON r.Id = m.RegionId WHERE m.Clave = SUBSTRING(p.ClavePresupuestal, 23, 3) LIMIT 1) AS NombreRegion
+                        (SELECT TOP 1 Nombre FROM cat_municipio WHERE Clave = SUBSTRING(p.ClavePresupuestal, 23, 3)) AS NombreMunicipio,
+                        (SELECT TOP 1 r.Descripcion FROM cat_region r JOIN cat_municipio m ON r.Id = m.RegionId WHERE m.Clave = SUBSTRING(p.ClavePresupuestal, 23, 3)) AS NombreRegion
                     FROM presupuestocalendarizado p;
                 ";
                 return db.Query<PresupuestoGridDto>(query);
@@ -65,7 +65,7 @@ namespace SIAP.Repositories
         /// <summary>
         /// Obtiene la matriz presupuestal de manera paginada, ideal para cargar grandes volúmenes de datos en DataTables (server-side processing).
         /// Permite filtrar los registros por término de búsqueda (que coincida con la Clave Presupuestal), municipio, región y estado de calendarización.
-        /// Primero ejecuta una consulta de COUNT para obtener el total de registros filtrados, y luego ejecuta la consulta principal aplicando LIMIT y ORDER BY.
+        /// Primero ejecuta una consulta de COUNT para obtener el total de registros filtrados, y luego ejecuta la consulta principal aplicando ORDER BY con OFFSET/FETCH.
         /// </summary>
         /// <param name="start">Índice del primer registro a devolver (para paginación).</param>
         /// <param name="length">Número máximo de registros a devolver por página.</param>
@@ -89,6 +89,10 @@ namespace SIAP.Repositories
                 }
                 catch { }
 
+                // DataTables manda length = -1 cuando se elige "Todos"; FETCH NEXT no acepta valores <= 0
+                if (start < 0) start = 0;
+                if (length <= 0) length = int.MaxValue;
+
                 var parameters = new DynamicParameters();
                 parameters.Add("Start", start);
                 parameters.Add("Length", length);
@@ -101,12 +105,12 @@ namespace SIAP.Repositories
                 }
                 if (!string.IsNullOrEmpty(mpio))
                 {
-                    whereClause += " AND (SELECT Nombre FROM cat_municipio WHERE Clave = SUBSTRING(p.ClavePresupuestal, 23, 3) LIMIT 1) = @Mpio";
+                    whereClause += " AND (SELECT TOP 1 Nombre FROM cat_municipio WHERE Clave = SUBSTRING(p.ClavePresupuestal, 23, 3)) = @Mpio";
                     parameters.Add("Mpio", mpio);
                 }
                 if (!string.IsNullOrEmpty(region))
                 {
-                    whereClause += " AND (SELECT r.Descripcion FROM cat_region r JOIN cat_municipio m ON r.Id = m.RegionId WHERE m.Clave = SUBSTRING(p.ClavePresupuestal, 23, 3) LIMIT 1) = @Region";
+                    whereClause += " AND (SELECT TOP 1 r.Descripcion FROM cat_region r JOIN cat_municipio m ON r.Id = m.RegionId WHERE m.Clave = SUBSTRING(p.ClavePresupuestal, 23, 3)) = @Region";
                     parameters.Add("Region", region);
                 }
                 if (!string.IsNullOrEmpty(estado) && estado != "all")
@@ -128,22 +132,22 @@ namespace SIAP.Repositories
                     SELECT 
                         p.Id, 
                         p.ClavePresupuestal,
-                        (SELECT Descripcion FROM cat_ur WHERE Clave = SUBSTRING(p.ClavePresupuestal, 1, 2) LIMIT 1) AS UrDescripcion,
-                        (SELECT Descripcion FROM cat_programapresupuestario WHERE Clave = SUBSTRING(p.ClavePresupuestal, 11, 3) LIMIT 1) AS ProgramaDescripcion,
-                        (SELECT Descripcion FROM cat_objetogastointegrar WHERE Clave = SUBSTRING(p.ClavePresupuestal, 29, 5) LIMIT 1) AS ObjetoGastoDescripcion,
+                        (SELECT TOP 1 Descripcion FROM cat_ur WHERE Clave = SUBSTRING(p.ClavePresupuestal, 1, 2)) AS UrDescripcion,
+                        (SELECT TOP 1 Descripcion FROM cat_programapresupuestario WHERE Clave = SUBSTRING(p.ClavePresupuestal, 11, 3)) AS ProgramaDescripcion,
+                        (SELECT TOP 1 Descripcion FROM cat_objetogastointegrar WHERE Clave = SUBSTRING(p.ClavePresupuestal, 29, 5)) AS ObjetoGastoDescripcion,
                         p.Aprobado,
-                         (IFNULL(p.Aprobado, 0) + IFNULL(p.Aumentos, 0) - IFNULL(p.Disminuciones, 0)) AS Modificado,
+                         (ISNULL(p.Aprobado, 0) + ISNULL(p.Aumentos, 0) - ISNULL(p.Disminuciones, 0)) AS Modificado,
                         p.Pagado,
                         p.Pagado AS Ministerio,
-                        (SELECT IFNULL(SUM(Monto), 0) FROM apartados_presupuesto a WHERE a.ClavePresupuestal = p.ClavePresupuestal AND a.Activo = 1 AND a.FechaApartado >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS SaldoApartado,
+                        (SELECT ISNULL(SUM(Monto), 0) FROM apartados_presupuesto a WHERE a.ClavePresupuestal = p.ClavePresupuestal AND a.Activo = 1 AND a.FechaApartado >= DATEADD(DAY, -7, GETDATE())) AS SaldoApartado,
                         CASE WHEN (p.Enero + p.Febrero + p.Marzo + p.Abril + p.Mayo + p.Junio + p.Julio + p.Agosto + p.Septiembre + p.Octubre + p.Noviembre + p.Diciembre) > 0 THEN 1 ELSE 0 END AS EsCalendarizada,
                         SUBSTRING(p.ClavePresupuestal, 23, 3) AS ClaveMunicipio,
-                        (SELECT Nombre FROM cat_municipio WHERE Clave = SUBSTRING(p.ClavePresupuestal, 23, 3) LIMIT 1) AS NombreMunicipio,
-                        (SELECT r.Descripcion FROM cat_region r JOIN cat_municipio m ON r.Id = m.RegionId WHERE m.Clave = SUBSTRING(p.ClavePresupuestal, 23, 3) LIMIT 1) AS NombreRegion
+                        (SELECT TOP 1 Nombre FROM cat_municipio WHERE Clave = SUBSTRING(p.ClavePresupuestal, 23, 3)) AS NombreMunicipio,
+                        (SELECT TOP 1 r.Descripcion FROM cat_region r JOIN cat_municipio m ON r.Id = m.RegionId WHERE m.Clave = SUBSTRING(p.ClavePresupuestal, 23, 3)) AS NombreRegion
                     FROM presupuestocalendarizado p
                     {whereClause}
                     ORDER BY p.Id DESC
-                    LIMIT @Start, @Length;
+                    OFFSET @Start ROWS FETCH NEXT @Length ROWS ONLY;
                 ";
                 var data = db.Query<PresupuestoGridDto>(query, parameters);
                 
@@ -163,17 +167,16 @@ namespace SIAP.Repositories
             using (IDbConnection db = DbConnection)
             {
                 string query = @"
-                    SELECT 
+                    SELECT TOP 1
                         p.ClavePresupuestal,
                         p.Aprobado, 
-                         (IFNULL(p.Aprobado, 0) + IFNULL(p.Aumentos, 0) - IFNULL(p.Disminuciones, 0)) AS Modificado, 
+                         (ISNULL(p.Aprobado, 0) + ISNULL(p.Aumentos, 0) - ISNULL(p.Disminuciones, 0)) AS Modificado, 
                         p.Devengado, p.Pagado, p.Disminuciones AS GastadoPorAdecuacion,
                         p.Enero, p.Febrero, p.Marzo, p.Abril, p.Mayo, p.Junio,
                         p.Julio, p.Agosto, p.Septiembre, p.Octubre, p.Noviembre, p.Diciembre,
-                        (SELECT IFNULL(SUM(Monto), 0) FROM apartados_presupuesto WHERE ClavePresupuestal = @Clave AND Activo = 1 AND FechaApartado >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS SaldoApartado
+                        (SELECT ISNULL(SUM(Monto), 0) FROM apartados_presupuesto WHERE ClavePresupuestal = @Clave AND Activo = 1 AND FechaApartado >= DATEADD(DAY, -7, GETDATE())) AS SaldoApartado
                     FROM presupuestocalendarizado p
-                    WHERE p.ClavePresupuestal = @Clave
-                    LIMIT 1;
+                    WHERE p.ClavePresupuestal = @Clave;
                 ";
                 var dto = db.QueryFirstOrDefault<PresupuestoDetalleDto>(query, new { Clave = clave });
                 
@@ -196,7 +199,7 @@ namespace SIAP.Repositories
                     int.TryParse(cpStr, out anioClave);
 
                     // Poblamos la lista de apartados activos
-                    string apQuery = "SELECT Id, Monto, Motivo, Oficio, FechaApartado FROM apartados_presupuesto WHERE ClavePresupuestal = @Clave AND Activo = 1 AND FechaApartado >= DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY FechaApartado DESC";
+                    string apQuery = "SELECT Id, Monto, Motivo, Oficio, FechaApartado FROM apartados_presupuesto WHERE ClavePresupuestal = @Clave AND Activo = 1 AND FechaApartado >= DATEADD(DAY, -7, GETDATE()) ORDER BY FechaApartado DESC";
                     dto.Apartados = db.Query<ApartadoDto>(apQuery, new { Clave = clave }).AsList();
 
 
@@ -206,105 +209,13 @@ namespace SIAP.Repositories
         }
 
         /// <summary>
-        /// Descompone una Clave Presupuestal de 56 caracteres en sus segmentos lógicos (UR, Programa, Objeto de Gasto, Municipio, etc.).
-        /// Recorre una configuración predefinida de segmentos y su longitud, consultando en base de datos la descripción 
-        /// de cada segmento desde su tabla de catálogo respectiva para generar un objeto detallado por segmento.
-        /// Tiene lógica específica para el Ciclo Presupuestal y para los Proyectos Estratégicos.
+        /// Separa una clave presupuestal en sus segmentos según la estructura de su ejercicio
+        /// (cat_estructuraclave) y busca la descripción de cada uno en su catálogo.
+        /// El ejercicio se detecta por la longitud de la clave y su segmento CP.
         /// </summary>
-        /// <param name="clave">La Clave Presupuestal que se desea decodificar y separar en segmentos.</param>
-        /// <returns>Un objeto <see cref="ClaveDecodificadaDto"/> que contiene una lista de segmentos, cada uno con su valor y descripción extraída de los catálogos.</returns>
         public ClaveDecodificadaDto DecodificarClave(string clave)
         {
-            var res = new ClaveDecodificadaDto();
-            if (string.IsNullOrEmpty(clave)) return res;
-
-            var segmentosConfig = new [] {
-                new { N = "Unidad Responsable", A = "UR", L = 2, T = "cat_ur" },
-                new { N = "Unidad Responsable Op.", A = "UR0", L = 3, T = "cat_unidadresponsableoperativa" },
-                new { N = "Finalidad", A = "FI", L = 1, T = "cat_finalidad" },
-                new { N = "Función", A = "F", L = 1, T = "cat_funcion" },
-                new { N = "Subfunción", A = "SF", L = 1, T = "cat_subfuncion" },
-                new { N = "Subsubfunción", A = "SSF", L = 1, T = "cat_subsubfuncion" },
-                new { N = "Programa Sectorial", A = "PS", L = 1, T = "cat_programasectorial" },
-                new { N = "Programa Presupuestario", A = "PP", L = 3, T = "cat_programapresupuestario" },
-                new { N = "Origen de Asignación", A = "OA", L = 2, T = "cat_origenasignacion" },
-                new { N = "Actividad Institucional", A = "AI", L = 3, T = "cat_actividadinstitucional" },
-                new { N = "Proyecto Estratégico", A = "PT", L = 4, T = "cat_proyectoestrategico" },
-                new { N = "Municipio", A = "MPIO", L = 3, T = "cat_municipio" },
-                new { N = "Grupo Asignación", A = "GA", L = 1, T = "cat_asignaciongasto" },
-                new { N = "Clasif. Objeto Gasto", A = "COGC", L = 2, T = "cat_objetogasto" },
-                new { N = "Gasto", A = "GASTO", L = 5, T = "cat_objetogastointegrar" },
-                new { N = "Gasto (Objeto)", A = "GTO", L = 2, T = "cat_orientaciongasto" },
-                new { N = "Año de Gasto", A = "AG", L = 2, T = "cat_aniogasto" },
-                new { N = "Tipo de Gasto", A = "TG", L = 1, T = "cat_tipogasto" },
-                new { N = "Tipo de Recurso", A = "TR", L = 1, T = "cat_tiporecurso" },
-                new { N = "Fuente Financiamiento", A = "FF", L = 1, T = "cat_fuentefinanciamiento" },
-                new { N = "Subfuente Financiamiento", A = "SFTE", L = 1, T = "cat_subfuentefinanciamiento" },
-                new { N = "Ramo", A = "RM", L = 2, T = "cat_ramo" },
-                new { N = "Programa Fondo", A = "PF", L = 5, T = "cat_programafondo" },
-                new { N = "Rubro de Ingresos", A = "RI", L = 3, T = "cat_rubroingresos" },
-                new { N = "Ciclo Presupuestal", A = "CP", L = 4, T = "" },
-                new { N = "Dígito Ministración", A = "DM", L = 1, T = "cat_digitosministracion" }
-            };
-
-            int currentIndex = 0;
-            using (IDbConnection db = DbConnection)
-            {
-                foreach (var seg in segmentosConfig)
-                {
-                    if (currentIndex + seg.L > clave.Length) break;
-
-                    string valor = clave.Substring(currentIndex, seg.L);
-                    string descripcion = "";
-                    
-                    try
-                    {
-                        if (seg.A == "CP")
-                        {
-                            // Es el Ciclo Presupuestal (ej. 2025), el valor literal es la descripción
-                            descripcion = $"Año {valor}";
-                        }
-                        else if (seg.A == "PT" && valor.Length == 4)
-                        {
-                            // Lógica especial para Proyecto Estratégico (ej. A001)
-                            string letraCatalogo = valor.Substring(0, 1);
-                            string numeroProyecto = valor.Substring(1, 3);
-                            string query = $"SELECT Descripcion FROM {seg.T} WHERE Clave = @c LIMIT 1";
-                            string descCatalogo = db.QueryFirstOrDefault<string>(query, new { c = letraCatalogo });
-                            
-                            if (!string.IsNullOrEmpty(descCatalogo))
-                            {
-                                descripcion = $"{descCatalogo} - Proyecto {numeroProyecto}";
-                            }
-                            else
-                            {
-                                descripcion = $"Proyecto {numeroProyecto}";
-                            }
-                        }
-                        else
-                        {
-                            string colName = seg.T == "cat_municipio" ? "Nombre" : "Descripcion";
-                            string query = $"SELECT {colName} FROM {seg.T} WHERE Clave = @c LIMIT 1";
-                            descripcion = db.QueryFirstOrDefault<string>(query, new { c = valor });
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // Ignore table not found or column not found
-                    }
-
-                    res.Segmentos.Add(new SegmentoClaveDto
-                    {
-                        Nombre = seg.N,
-                        Abreviatura = seg.A,
-                        Valor = valor,
-                        Descripcion = descripcion ?? ""
-                    });
-
-                    currentIndex += seg.L;
-                }
-            }
-            return res;
+            return new SIAP.Services.ClavePresupuestalService().Decodificar(clave);
         }
 
         /// <summary>
@@ -336,63 +247,16 @@ namespace SIAP.Repositories
 
                 string query = @"
                     INSERT INTO presupuestocalendarizado 
-                    (ClavePresupuestal, Aprobado, Modificado, Devengado, Pagado,
+                    (ClavePresupuestal, Aprobado, Devengado, Pagado,
                      Enero, Febrero, Marzo, Abril, Mayo, Junio, Julio, Agosto, Septiembre, Octubre, Noviembre, Diciembre)
                     VALUES 
-                    (@c, @a, @a, 0, 0,
+                    (@c, @a, 0, 0,
                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
                 ";
                 db.Execute(query, new { c = clave, a = aprobado });
             }
         }
 
-        public void InsertarPresupuestoMasivo(CargaMasivaDto masiva, string usuarioId)
-        {
-            using (IDbConnection db = DbConnection)
-            {
-                db.Open();
-                using (var transaction = db.BeginTransaction())
-                {
-                    try
-                    {
-                        // 1. Guardar el registro del archivo/carga en el historial
-                        string queryHistorial = @"
-                            INSERT INTO tblp_pre_historialcargamasiva 
-                            (anio, oficionumeroinicial, fechacarga, usuariocreo, montototalaprobado)
-                            VALUES 
-                            (@anio, @oficio, NOW(), @usuario, @monto)
-                        ";
-                        
-                        decimal montoTotal = masiva.Claves.Sum(c => c.Aprobado);
-                        db.Execute(queryHistorial, new { anio = masiva.Anio, oficio = masiva.Oficio, usuario = usuarioId, monto = montoTotal }, transaction);
-
-                        // 2. Insertar claves masivamente
-                        string queryInsert = @"
-                            INSERT INTO presupuestocalendarizado 
-                            (ClavePresupuestal, Aprobado, Devengado, Pagado,
-                             Enero, Febrero, Marzo, Abril, Mayo, Junio, Julio, Agosto, Septiembre, Octubre, Noviembre, Diciembre)
-                            VALUES 
-                            (@ClavePresupuestal, @Aprobado, 0, 0,
-                             @Enero, @Febrero, @Marzo, @Abril, @Mayo, @Junio, @Julio, @Agosto, @Septiembre, @Octubre, @Noviembre, @Diciembre)
-                            ON DUPLICATE KEY UPDATE 
-                                Aprobado = VALUES(Aprobado),
-                                Enero = VALUES(Enero), Febrero = VALUES(Febrero), Marzo = VALUES(Marzo), Abril = VALUES(Abril),
-                                Mayo = VALUES(Mayo), Junio = VALUES(Junio), Julio = VALUES(Julio), Agosto = VALUES(Agosto),
-                                Septiembre = VALUES(Septiembre), Octubre = VALUES(Octubre), Noviembre = VALUES(Noviembre), Diciembre = VALUES(Diciembre)
-                        ";
-                        
-                        db.Execute(queryInsert, masiva.Claves, transaction);
-                        
-                        transaction.Commit();
-                    }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw;
-                    }
-                }
-            }
-        }
 
 
         public IEnumerable<PresupuestoDetalleDto> ObtenerClavesPorObra(string prefijo22Digitos)
@@ -409,7 +273,7 @@ namespace SIAP.Repositories
                     SELECT 
                         ClavePresupuestal,
                         Aprobado, 
-                        (IFNULL(Aprobado, 0) + IFNULL(Aumentos, 0) - IFNULL(Disminuciones, 0)) AS Modificado, 
+                        (ISNULL(Aprobado, 0) + ISNULL(Aumentos, 0) - ISNULL(Disminuciones, 0)) AS Modificado, 
                         Devengado, Pagado
                     FROM presupuestocalendarizado
                     WHERE ClavePresupuestal LIKE @Prefijo
@@ -427,7 +291,7 @@ namespace SIAP.Repositories
                 // Insertamos directamente el apartado.
                 string sql = @"
                     INSERT INTO apartados_presupuesto (ClavePresupuestal, Monto, FechaApartado, Activo, Motivo, Oficio)
-                    VALUES (@Clave, @Monto, NOW(), 1, @Motivo, @Oficio);
+                    VALUES (@Clave, @Monto, GETDATE(), 1, @Motivo, @Oficio);
                 ";
                 int rows = db.Execute(sql, new { Clave = clave, Monto = monto, Motivo = motivo, Oficio = oficio });
                 return rows > 0;

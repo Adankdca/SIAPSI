@@ -4,7 +4,7 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Dapper;
-using MySql.Data.MySqlClient;
+using System.Data.SqlClient;
 using SIAP.Models;
 using SIAP.Repositories;
 
@@ -30,7 +30,7 @@ namespace SIAP
 
         private void CargarUsuarios()
         {
-            using (var db = new MySqlConnection(_connectionString))
+            using (var db = new SqlConnection(_connectionString))
             {
                 string query = "SELECT Id, Usuario AS Username, NombreCompleto, Rol, Activo FROM usuarios ORDER BY Id";
                 var lista = db.Query<Usuario>(query).ToList();
@@ -44,7 +44,7 @@ namespace SIAP
             if (e.CommandName == "Editar")
             {
                 int id = Convert.ToInt32(e.CommandArgument);
-                using (var db = new MySqlConnection(_connectionString))
+                using (var db = new SqlConnection(_connectionString))
                 {
                     string query = @"
                         SELECT 
@@ -88,7 +88,7 @@ namespace SIAP
                 int id = Convert.ToInt32(e.CommandArgument);
                 try
                 {
-                    using (var db = new MySqlConnection(_connectionString))
+                    using (var db = new SqlConnection(_connectionString))
                     {
                         // Obtener nombre de usuario para el log
                         string username = db.ExecuteScalar<string>("SELECT Usuario FROM usuarios WHERE Id = @Id", new { Id = id });
@@ -128,7 +128,7 @@ namespace SIAP
                     return;
                 }
 
-                using (var db = new MySqlConnection(_connectionString))
+                using (var db = new SqlConnection(_connectionString))
                 {
                     if (id == 0) // Nuevo usuario
                     {
@@ -146,7 +146,7 @@ namespace SIAP
                             return;
                         }
 
-                        string insertUser = "INSERT INTO usuarios (Usuario, PasswordHash, NombreCompleto, Rol, Activo) VALUES (@User, @Pass, @Nombre, @Rol, @Activo); SELECT LAST_INSERT_ID();";
+                        string insertUser = "INSERT INTO usuarios (Usuario, PasswordHash, NombreCompleto, Rol, Activo) VALUES (@User, @Pass, @Nombre, @Rol, @Activo); SELECT CAST(SCOPE_IDENTITY() AS INT);";
                         int newId = db.QuerySingle<int>(insertUser, new { User = username, Pass = password, Nombre = nombre, Rol = rol, Activo = activo });
 
                         string insertAcceso = "INSERT INTO usuarios_accesos (UsuarioId, VerDashboard, VerPresupuesto, VerAdecuaciones, VerMinistraciones, VerCatalogos) VALUES (@Id, @D, @P, @A, @M, @C)";
