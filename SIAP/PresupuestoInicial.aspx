@@ -24,6 +24,12 @@
         #tblErrores td, #tblAdvertencias td, #tblHistorial td { font-size: .82rem; vertical-align: middle; }
         .estructura span { display: inline-block; border: 1px solid var(--color-arena); border-radius: .35rem; padding: .1rem .4rem; margin: .1rem; font-size: .72rem; }
         .estructura b { color: var(--color-guinda); }
+        /* DataTables: sin barra horizontal y botones Anterior/Siguiente completos */
+        .dataTables_wrapper .row { margin-left: 0; margin-right: 0; }
+        .dataTables_wrapper .row > [class*="col-"] { padding-left: 0; padding-right: 0; }
+        .table-responsive { overflow-x: auto; overflow-y: hidden; }
+        .dataTables_paginate .page-item.previous .page-link,
+        .dataTables_paginate .page-item.next .page-link { width: auto; min-width: 5.5rem; border-radius: 1rem; padding: 0 .75rem; }
         .dataTables_length select { min-width: 75px; height: auto; padding: .3rem 1.8rem .3rem .6rem; font-size: .82rem; color: #333; display: inline-block; }
     </style>
     <script type="text/javascript">

@@ -58,40 +58,97 @@ namespace SIAP.Controllers
         }
 
         /// <summary>
-        /// Obtiene la matriz presupuestal paginada, diseñada específicamente para su consumo por DataTables.
-        /// Intercepta el parámetro 'search[value]' nativo de DataTables para filtrar y aplica filtros adicionales de la vista.
+        /// Consulta General paginada para DataTables, por ejercicio. Los filtros por segmento llegan en
+        /// "seg" como UR:08|PP:H04|MPIO:101. Las descripciones salen de los segmentos guardados de cada clave.
         /// </summary>
-        /// <param name="draw">Contador de peticiones de DataTables para asegurar el orden de las respuestas asíncronas.</param>
-        /// <param name="start">Índice del primer registro a devolver en la página actual.</param>
-        /// <param name="length">Número de registros a mostrar por página.</param>
-        /// <param name="search">Texto de búsqueda parcial ingresado por el usuario.</param>
-        /// <param name="mpio">Filtro opcional para buscar por Municipio exacto.</param>
-        /// <param name="region">Filtro opcional para buscar por Región exacta.</param>
-        /// <param name="estado">Filtro opcional de estado (ej: 'calendarizadas', 'porliberar', o vacío).</param>
-        /// <returns>Objeto JSON con el formato requerido por DataTables, incluyendo draw, recordsTotal, recordsFiltered y data.</returns>
         [HttpGet]
         [Route("matriz/paginado")]
-        public IHttpActionResult GetMatrizPaginado(int draw = 1, int start = 0, int length = 10, string search = "", string mpio = "", string region = "", string estado = "")
+        public IHttpActionResult GetMatrizPaginado(int anio, int draw = 1, int start = 0, int length = 10,
+                                                   string seg = "", string region = "", string estado = "")
         {
             try
             {
-                // Leer el valor de búsqueda nativo de DataTables
-                var searchVal = System.Web.HttpContext.Current.Request.QueryString["search[value]"] ?? search;
+                var qs = System.Web.HttpContext.Current.Request.QueryString;
+                var filtro = new FiltroMatriz
+                {
+                    Anio = anio, Start = start, Length = length,
+                    Search = qs["search[value]"], Estado = estado, Region = region
+                };
+                foreach (var par in (seg ?? "").Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var kv = par.Split(new[] { ':' }, 2);
+                    if (kv.Length == 2 && kv[1].Length > 0) filtro.Segmentos[kv[0]] = kv[1];
+                }
+                string colIdx = qs["order[0][column]"];
+                if (!string.IsNullOrEmpty(colIdx))
+                {
+                    filtro.OrdenColumna = qs["columns[" + colIdx + "][name]"];
+                    filtro.OrdenDescendente = string.Equals(qs["order[0][dir]"], "desc", StringComparison.OrdinalIgnoreCase);
+                }
 
-                var (data, totalCount) = _repository.ObtenerMatrizPresupuestoPaginado(start, length, searchVal, mpio, region, estado);
-                
+                var res = new SIAP.Services.PresupuestoConsultaService().Matriz(filtro);
                 return Ok(new
                 {
                     draw = draw,
-                    recordsTotal = totalCount,
-                    recordsFiltered = totalCount, 
-                    data = data
+                    recordsTotal = res.Total,
+                    recordsFiltered = res.Filtradas,
+                    totales = res.Totales,
+                    data = res.Filas
                 });
             }
             catch (Exception ex)
             {
                 return InternalServerError(ex);
             }
+        }
+
+        /// <summary>Ejercicios con presupuesto cargado o con estructura de clave configurada.</summary>
+        [HttpGet]
+        [Route("ejercicios")]
+        public IHttpActionResult GetEjercicios()
+        {
+            try { return Ok(new SIAP.Services.PresupuestoConsultaService().Ejercicios()); }
+            catch (Exception ex) { return InternalServerError(ex); }
+        }
+
+        /// <summary>Valores de un segmento (UR, PP, FF, MPIO...) usados en el ejercicio, para los filtros.</summary>
+        [HttpGet]
+        [Route("filtros/segmento")]
+        public IHttpActionResult GetOpcionesSegmento(int anio, string abrev)
+        {
+            try { return Ok(new SIAP.Services.PresupuestoConsultaService().OpcionesSegmento(anio, abrev)); }
+            catch (Exception ex) { return InternalServerError(ex); }
+        }
+
+        /// <summary>Valores de segmento del ejercicio que no están en su catálogo.</summary>
+        [HttpGet]
+        [Route("sincatalogo")]
+        public IHttpActionResult GetSinCatalogo(int anio)
+        {
+            try { return Ok(new SIAP.Services.PresupuestoConsultaService().ValoresSinCatalogo(anio)); }
+            catch (Exception ex) { return InternalServerError(ex); }
+        }
+
+        /// <summary>
+        /// Vuelve a buscar en los catálogos los segmentos de todas las claves del ejercicio
+        /// (después de dar de alta los valores que faltaban). No cambia importes.
+        /// </summary>
+        [HttpPost]
+        [Route("reprocesar-catalogos")]
+        public IHttpActionResult ReprocesarCatalogos(int anio)
+        {
+            try
+            {
+                var session = System.Web.HttpContext.Current?.Session;
+                if (session == null || session["UsuarioId"] == null)
+                    return Content(System.Net.HttpStatusCode.Unauthorized, "La sesión expiró. Vuelva a iniciar sesión.");
+                var res = new SIAP.Services.PresupuestoConsultaService().ReprocesarCatalogos(anio);
+                RegistrarLog("ReprocesarCatalogos", string.Format("Ejercicio {0}: {1} claves, {2} segmentos actualizados, sin catálogo {3} → {4}",
+                    anio, res.Claves, res.SegmentosActualizados, res.SinCatalogoAntes, res.SinCatalogoDespues));
+                return Ok(res);
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (Exception ex) { return InternalServerError(ex); }
         }
 
         /// <summary>
@@ -277,25 +334,33 @@ namespace SIAP.Controllers
             }
         }
 
+        /// <summary>
+        /// Alta manual de una clave en el ejercicio. Valida la longitud y el CP según la estructura del año;
+        /// el aprobado queda por liberar. Devuelve los segmentos que no están en su catálogo (no impiden el alta).
+        /// </summary>
         [HttpPost]
         [Route("nueva")]
-        public IHttpActionResult NuevaClave([FromBody] PresupuestoDetalleDto req)
+        public IHttpActionResult NuevaClave([FromBody] NuevaClaveRequest req)
         {
             try
             {
-                if (string.IsNullOrEmpty(req.ClavePresupuestal) || req.ClavePresupuestal.Length != 56) 
-                    return BadRequest("La clave debe tener 56 caracteres exactos.");
-                if (req.Aprobado <= 0)
-                    return BadRequest("El monto aprobado debe ser mayor a 0.");
+                var session = System.Web.HttpContext.Current?.Session;
+                if (session == null || session["UsuarioId"] == null)
+                    return Content(System.Net.HttpStatusCode.Unauthorized, "La sesión expiró. Vuelva a iniciar sesión.");
 
-                _repository.InsertarNuevaClaveManual(req.ClavePresupuestal, req.Aprobado);
-                RegistrarLog("NuevaClave", string.Format("Clave: {0}, Aprobado: {1}", req.ClavePresupuestal, req.Aprobado));
-                return Ok();
+                var segs = new SIAP.Services.PresupuestoConsultaService().InsertarClaveManual(req);
+                var sinCatalogo = segs.Where(s => s.TablaCatalogo != null && !s.CatalogoId.HasValue)
+                                      .Select(s => s.Abreviatura + " " + s.Valor).ToList();
+                RegistrarLog("NuevaClave", string.Format("Ejercicio {0}, clave {1}, aprobado {2:N2}, oficio {3}",
+                    req.Anio, req.ClavePresupuestal, req.Aprobado, req.Oficio));
+                return Ok(new { success = true, sinCatalogo });
             }
-            catch (Exception ex)
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (SqlException ex) when (ex.Number == 2601 || ex.Number == 2627)
             {
-                return BadRequest(ex.Message);
+                return BadRequest("La clave ya existe en el presupuesto.");
             }
+            catch (Exception ex) { return InternalServerError(ex); }
         }
 
         [HttpGet]

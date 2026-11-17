@@ -17,6 +17,8 @@ namespace SIAP.Services
         private readonly EstructuraClaveRepository _repo = new EstructuraClaveRepository();
         private readonly Dictionary<string, Dictionary<string, EstructuraClaveRepository.RegistroCatalogo>> _catalogos =
             new Dictionary<string, Dictionary<string, EstructuraClaveRepository.RegistroCatalogo>>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Dictionary<int, EstructuraClaveRepository.RegistroCatalogo>> _porId =
+            new Dictionary<string, Dictionary<int, EstructuraClaveRepository.RegistroCatalogo>>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _catalogosInvalidos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private bool _orgLeido;
         private int? _orgPubId;
@@ -47,6 +49,7 @@ namespace SIAP.Services
             if (_catalogos.TryGetValue(id, out idx)) return idx;
 
             idx = new Dictionary<string, EstructuraClaveRepository.RegistroCatalogo>();
+            var porId = new Dictionary<int, EstructuraClaveRepository.RegistroCatalogo>();
             var registros = _repo.LeerCatalogo(seg.TablaCatalogo, seg.ColumnaClave, seg.ColumnaPadre);
             if (registros == null)
             {
@@ -59,10 +62,22 @@ namespace SIAP.Services
                 {
                     string k = Llave(r.Clave, jerarquico ? r.PadreId : null);
                     if (!idx.ContainsKey(k)) idx[k] = r;
+                    porId[r.Id] = r;
                 }
             }
             _catalogos[id] = idx;
+            _porId[id] = porId;
             return idx;
+        }
+
+        /// <summary>Descripción de un registro del catálogo del segmento, por su Id. Null si no existe.</summary>
+        public string DescripcionPorId(SegmentoEstructura seg, int catalogoId)
+        {
+            if (seg == null || string.IsNullOrWhiteSpace(seg.TablaCatalogo)) return null;
+            Catalogo(seg);
+            string id = seg.TablaCatalogo + "|" + seg.ColumnaClave + "|" + seg.ColumnaPadre;
+            EstructuraClaveRepository.RegistroCatalogo r;
+            return _porId[id].TryGetValue(catalogoId, out r) ? r.Descripcion : null;
         }
 
         /// <summary>
