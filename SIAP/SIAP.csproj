@@ -433,9 +433,11 @@
     <Compile Include="Data\Seguimiento.cs" />
     <Compile Include="Data\Turnado.cs" />
     <Compile Include="DbConnectionFactory.cs" />
+    <Compile Include="Models\PresupuestoConsultaModels.cs" />
     <Compile Include="Models\PresupuestoInicialModels.cs" />
     <Compile Include="Repositories\EstructuraClaveRepository.cs" />
     <Compile Include="Services\ClavePresupuestalService.cs" />
+    <Compile Include="Services\PresupuestoConsultaService.cs" />
     <Compile Include="Services\PresupuestoInicialService.cs" />
     <Compile Include="Controllers\PresupuestoInicialController.cs" />
     <Compile Include="PresupuestoInicial.aspx.cs">
