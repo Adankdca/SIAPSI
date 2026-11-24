@@ -21,6 +21,13 @@ namespace SIAP.Models
         public string ColumnaPadre { get; set; }
         public string SegmentoPadre { get; set; }
         public string ColumnaFK { get; set; }
+        /// <summary>
+        /// Segmentos que se anteponen al valor para buscarlo (p. ej. "TR,FF,RA" para el programa fondo:
+        /// se busca 1528C001-00 en la columna ColumnaClave). Null = se busca el valor solo.
+        /// </summary>
+        public string SegmentosLlave { get; set; }
+        /// <summary>Columna del catálogo con el año: si se indica, solo se leen los registros del ejercicio.</summary>
+        public string ColumnaAnio { get; set; }
     }
 
     /// <summary>Valor de un segmento ya separado de la clave y buscado en su catálogo.</summary>

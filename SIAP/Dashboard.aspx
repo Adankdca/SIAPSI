@@ -1,4 +1,8 @@
 <%@ Page Language="C#" AutoEventWireup="true" %>
+<script runat="server">
+    // Sin sesión: al Login con aviso de sesión expirada. Sin permiso: al Menú.
+    protected void Page_Load(object sender, EventArgs e) { SIAP.Seguridad.Requerir(this, "VerDashboard"); }
+</script>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
@@ -778,6 +782,7 @@
             window.location.href = "Login.aspx";
         }
     </script>
+    <script src="assets/js/SesionExpirada.js"></script>
 </head>
 <body>
     <!-- ============================================= -->
@@ -1065,7 +1070,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <p class="text-sm text-muted mb-4">El presupuesto será apartado por un periodo de <strong>7 días</strong> a la espera de la adecuación. Durante este tiempo el saldo no podrá ser utilizado por otros proyectos.</p>
+                    <p class="text-sm text-muted mb-4">El presupuesto quedará apartado hasta que la adecuación se registre o se cancele. Mientras tanto el saldo no podrá ser utilizado por otros proyectos.</p>
                     
                     <input type="hidden" id="modalClaveActual" />
                     
@@ -1680,7 +1685,7 @@
                 modalAdecuacionInstance.hide();
                 Swal.fire({
                     title: 'Apartado Registrado',
-                    text: 'El monto ha sido apartado correctamente por 7 días.',
+                    text: 'El monto quedó apartado hasta que la adecuación se registre o se cancele.',
                     icon: 'success',
                     confirmButtonColor: '#9F2241'
                 }).then(async () => {

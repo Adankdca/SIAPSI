@@ -53,6 +53,7 @@
         var data = sessionStorage.getItem('name');
         if (data == null) { window.location.href = "Login.aspx"; }
     </script>
+    <script src="assets/js/SesionExpirada.js"></script>
 </head>
 <body class="g-sidenav-show">
     <form id="form1" runat="server" onsubmit="return false;">
@@ -114,7 +115,7 @@
 
                       <!-- Filtros -->
                       <div class="row g-2 mb-3 filtros">
-                          <div class="col-lg-2 col-md-4">
+                          <div class="col-xl col-lg-3 col-md-4">
                               <label class="form-label" for="fEstado">Estado</label>
                               <select id="fEstado" class="form-control form-control-sm">
                                   <option value="">Todas</option>
@@ -122,23 +123,27 @@
                                   <option value="porliberar">Sin calendario (por liberar)</option>
                               </select>
                           </div>
-                          <div class="col-lg-2 col-md-4">
+                          <div class="col-xl col-lg-3 col-md-4">
                               <label class="form-label" for="fUR">Unidad responsable</label>
                               <select id="fUR" class="form-control form-control-sm filtro-seg" data-abrev="UR"><option value="">Todas</option></select>
                           </div>
-                          <div class="col-lg-2 col-md-4">
+                          <div class="col-xl col-lg-3 col-md-4">
                               <label class="form-label" for="fPP">Programa presupuestario</label>
                               <select id="fPP" class="form-control form-control-sm filtro-seg" data-abrev="PP"><option value="">Todos</option></select>
                           </div>
-                          <div class="col-lg-2 col-md-4">
+                          <div class="col-xl col-lg-3 col-md-4">
+                              <label class="form-label" for="fPF">Programa fondo</label>
+                              <select id="fPF" class="form-control form-control-sm filtro-seg" data-abrev="PF"><option value="">Todos</option></select>
+                          </div>
+                          <div class="col-xl col-lg-3 col-md-4">
                               <label class="form-label" for="fFF">Fuente de financiamiento</label>
                               <select id="fFF" class="form-control form-control-sm filtro-seg" data-abrev="FF"><option value="">Todas</option></select>
                           </div>
-                          <div class="col-lg-2 col-md-4">
+                          <div class="col-xl col-lg-3 col-md-4">
                               <label class="form-label" for="fRegion">Región</label>
                               <select id="fRegion" class="form-control form-control-sm"><option value="">Todas</option></select>
                           </div>
-                          <div class="col-lg-2 col-md-4">
+                          <div class="col-xl col-lg-3 col-md-4">
                               <label class="form-label" for="fMPIO">Municipio</label>
                               <select id="fMPIO" class="form-control form-control-sm filtro-seg" data-abrev="MPIO"><option value="">Todos</option></select>
                           </div>
@@ -264,6 +269,6 @@
     <script src="assets/js/core/bootstrap.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-    <script src="assets/js/PresupuestoConsulta.js?v=1"></script>
+    <script src="assets/js/PresupuestoConsulta.js?v=2"></script>
 </body>
 </html>

@@ -36,6 +36,7 @@
             display: inline-block;
         }
     </style>
+    <script src="assets/js/SesionExpirada.js"></script>
 </head>
 
 <body class="g-sidenav-show bg-gray-100">

@@ -1,4 +1,8 @@
 <%@ Page Language="C#" AutoEventWireup="true" %>
+<script runat="server">
+    // Sin sesión: al Login con aviso de sesión expirada. Sin permiso: al Menú.
+    protected void Page_Load(object sender, EventArgs e) { SIAP.Seguridad.Requerir(this); }
+</script>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="es">
 <head runat="server">
@@ -22,6 +26,7 @@
     </style>
 
     <script src="assets/js/jquery-3.5.1.js"></script>
+    <script src="assets/js/SesionExpirada.js"></script>
 </head>
 <body class="g-sidenav-show">
     <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl mt-3 mx-3 bg-gradient-primary" id="navbarBlur" data-scroll="false">

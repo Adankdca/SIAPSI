@@ -19,6 +19,9 @@ namespace SIAP.Services
             new Dictionary<string, Dictionary<string, EstructuraClaveRepository.RegistroCatalogo>>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Dictionary<int, EstructuraClaveRepository.RegistroCatalogo>> _porId =
             new Dictionary<string, Dictionary<int, EstructuraClaveRepository.RegistroCatalogo>>(StringComparer.OrdinalIgnoreCase);
+        // Por catálogo: claves que aparecen UNA sola vez en toda la tabla (sin importar el padre)
+        private readonly Dictionary<string, Dictionary<string, EstructuraClaveRepository.RegistroCatalogo>> _unicos =
+            new Dictionary<string, Dictionary<string, EstructuraClaveRepository.RegistroCatalogo>>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _catalogosInvalidos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private bool _orgLeido;
         private int? _orgPubId;
@@ -42,15 +45,41 @@ namespace SIAP.Services
             return (clave ?? "") + "|" + (padreId.HasValue ? padreId.Value.ToString() : "");
         }
 
+        /// <summary>Identifica un catálogo en caché: tabla, columnas y, si se filtra por año, el año.</summary>
+        private static string IdCatalogo(SegmentoEstructura seg)
+        {
+            string anio = string.IsNullOrWhiteSpace(seg.ColumnaAnio) ? "" : seg.ColumnaAnio + "=" + seg.Anio;
+            return seg.TablaCatalogo + "|" + seg.ColumnaClave + "|" + seg.ColumnaPadre + "|" + anio;
+        }
+
+        /// <summary>
+        /// Valor con el que se busca el segmento en su catálogo: el valor solo o, si la estructura
+        /// indica SegmentosLlave (p. ej. TR,FF,RA), esos valores seguidos del valor del segmento.
+        /// </summary>
+        private static string ValorBusqueda(SegmentoValor sv, SegmentoEstructura seg, List<SegmentoValor> segmentos)
+        {
+            if (string.IsNullOrWhiteSpace(seg.SegmentosLlave)) return sv.Valor;
+            var sb = new System.Text.StringBuilder();
+            foreach (var abrev in seg.SegmentosLlave.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var otro = segmentos.FirstOrDefault(x => string.Equals(x.Abreviatura, abrev.Trim(), StringComparison.OrdinalIgnoreCase));
+                sb.Append(otro == null ? "" : otro.Valor);
+            }
+            return sb.Append(sv.Valor).ToString();
+        }
+
         private Dictionary<string, EstructuraClaveRepository.RegistroCatalogo> Catalogo(SegmentoEstructura seg)
         {
-            string id = seg.TablaCatalogo + "|" + seg.ColumnaClave + "|" + seg.ColumnaPadre;
+            string id = IdCatalogo(seg);
             Dictionary<string, EstructuraClaveRepository.RegistroCatalogo> idx;
             if (_catalogos.TryGetValue(id, out idx)) return idx;
 
             idx = new Dictionary<string, EstructuraClaveRepository.RegistroCatalogo>();
             var porId = new Dictionary<int, EstructuraClaveRepository.RegistroCatalogo>();
-            var registros = _repo.LeerCatalogo(seg.TablaCatalogo, seg.ColumnaClave, seg.ColumnaPadre);
+            var unicos = new Dictionary<string, EstructuraClaveRepository.RegistroCatalogo>(StringComparer.OrdinalIgnoreCase);
+            var repetidas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var registros = _repo.LeerCatalogo(seg.TablaCatalogo, seg.ColumnaClave, seg.ColumnaPadre,
+                                               seg.ColumnaAnio, string.IsNullOrWhiteSpace(seg.ColumnaAnio) ? (int?)null : seg.Anio);
             if (registros == null)
             {
                 _catalogosInvalidos.Add(seg.TablaCatalogo);
@@ -63,10 +92,15 @@ namespace SIAP.Services
                     string k = Llave(r.Clave, jerarquico ? r.PadreId : null);
                     if (!idx.ContainsKey(k)) idx[k] = r;
                     porId[r.Id] = r;
+                    string c = r.Clave ?? "";
+                    if (repetidas.Contains(c)) continue;
+                    if (unicos.ContainsKey(c)) { unicos.Remove(c); repetidas.Add(c); }
+                    else unicos[c] = r;
                 }
             }
             _catalogos[id] = idx;
             _porId[id] = porId;
+            _unicos[id] = unicos;
             return idx;
         }
 
@@ -75,7 +109,7 @@ namespace SIAP.Services
         {
             if (seg == null || string.IsNullOrWhiteSpace(seg.TablaCatalogo)) return null;
             Catalogo(seg);
-            string id = seg.TablaCatalogo + "|" + seg.ColumnaClave + "|" + seg.ColumnaPadre;
+            string id = IdCatalogo(seg);
             EstructuraClaveRepository.RegistroCatalogo r;
             return _porId[id].TryGetValue(catalogoId, out r) ? r.Descripcion : null;
         }
@@ -142,17 +176,25 @@ namespace SIAP.Services
                         resueltos.TryGetValue(seg.SegmentoPadre, out p);
                         padreId = p;
                     }
-                    if (!padreId.HasValue)
-                    {
-                        // Sin padre no se puede saber cuál de los registros repetidos es el correcto
-                        resueltos[sv.Abreviatura] = null;
-                        continue;
-                    }
                 }
 
                 var idx = Catalogo(seg);
-                EstructuraClaveRepository.RegistroCatalogo reg;
-                if (idx.TryGetValue(Llave(sv.Valor, padreId), out reg))
+                EstructuraClaveRepository.RegistroCatalogo reg = null;
+                string valor = ValorBusqueda(sv, seg, segmentos);
+                bool encontrado = (!jerarquico || padreId.HasValue) && idx.TryGetValue(Llave(valor, padreId), out reg);
+
+                // Respaldo: el catálogo no tiene bien ligado el padre (p. ej. las partidas sin su OGC),
+                // pero si la clave existe UNA sola vez en toda la tabla, no hay duda de cuál es.
+                // No aplica a la UR: esa siempre debe pertenecer al organismo configurado.
+                if (!encontrado && jerarquico
+                    && !string.Equals(seg.SegmentoPadre, SegmentoOrganismo, StringComparison.OrdinalIgnoreCase))
+                {
+                    string idCat = IdCatalogo(seg);
+                    Dictionary<string, EstructuraClaveRepository.RegistroCatalogo> unicos;
+                    encontrado = _unicos.TryGetValue(idCat, out unicos) && unicos.TryGetValue(valor ?? "", out reg);
+                }
+
+                if (encontrado)
                 {
                     sv.CatalogoId = reg.Id;
                     sv.Descripcion = reg.Descripcion;

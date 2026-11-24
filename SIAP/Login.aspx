@@ -29,10 +29,15 @@
   <link rel="stylesheet" href="assets/js/SweetAlert2/plugins/animate.css/animate.css" />
   <script src="assets/js/SweetAlert2/plugins/sweetAlert2/sweetalert2.all.min.js"></script>
      <script>
-         var data = sessionStorage.getItem('name');
-         if (data != null) {
-             window.location.href = "Menu.aspx";
-         }
+         // Al llegar al Login la sesión se cierra (también en el servidor): se limpia la del navegador.
+         // Antes aquí se reenviaba al Menú si había datos en sessionStorage; con la sesión del
+         // servidor expirada eso hacía un ciclo Menú → Login → Menú que dejaba la página cargando.
+         try { sessionStorage.clear(); } catch (e) { }
+         document.addEventListener('DOMContentLoaded', function () {
+             if (/[?&]expirada=1/.test(window.location.search) && window.Swal) {
+                 Swal.fire({ title: 'Sesión expirada', text: 'Por seguridad la sesión se cerró por inactividad. Vuelva a iniciar sesión.', type: 'info' });
+             }
+         });
      </script>
       <style>
         .form-control-lg { 

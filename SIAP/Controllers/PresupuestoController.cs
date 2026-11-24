@@ -102,6 +102,24 @@ namespace SIAP.Controllers
             }
         }
 
+        /// <summary>
+        /// Detalle de una clave para la pantalla DetalleClave: importes cuadrados (de dónde sale el modificado
+        /// y cómo está repartido), calendario por mes con lo ministrado, apartados, ministraciones,
+        /// segmentos con su descripción y las otras claves del mismo proyecto.
+        /// </summary>
+        [HttpGet]
+        [Route("detalle-clave")]
+        public IHttpActionResult GetDetalleClave(string clave)
+        {
+            try
+            {
+                var d = new SIAP.Services.PresupuestoConsultaService().DetalleClave(clave);
+                if (d == null) return NotFound();
+                return Ok(d);
+            }
+            catch (Exception ex) { return InternalServerError(ex); }
+        }
+
         /// <summary>Ejercicios con presupuesto cargado o con estructura de clave configurada.</summary>
         [HttpGet]
         [Route("ejercicios")]

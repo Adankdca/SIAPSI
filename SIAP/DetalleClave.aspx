@@ -1,6 +1,10 @@
 <%@ Page Language="C#" AutoEventWireup="true" %>
+<script runat="server">
+    // Sin sesión: al Login con aviso de sesión expirada. Sin permiso: al Menú.
+    protected void Page_Load(object sender, EventArgs e) { SIAP.Seguridad.Requerir(this); }
+</script>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es">
 <head runat="server">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Detalle de Clave | SIAP</title>
@@ -25,60 +29,55 @@
         }
     </script>
     <style>
-        .chart-summary-wrapper {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #c8ccd0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-        }
-        .chart-container {
-            position: relative;
-            min-height: 250px;
-        }
-        .summary-side {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 12px;
-            padding-left: 20px;
-            border-left: 2px solid #f0f0f0;
-        }
-        .summary-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .summary-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        .summary-item .summary-label {
-            font-size: 0.8rem;
-            color: #666;
-            flex: 1;
-        }
-        .summary-item .summary-value {
-            font-weight: 700;
-            font-size: 0.9rem;
-        }
-        @media (max-width: 768px) {
-            .chart-summary-wrapper {
-                grid-template-columns: 1fr;
-            }
-            .summary-side {
-                padding-left: 0;
-                border-left: none;
-                border-top: 2px solid #f0f0f0;
-                padding-top: 20px;
-            }
-        }
+        .glass-card { background: #fff; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); }
+        .sec-titulo { color: var(--color-guinda); font-weight: 700; font-size: .95rem; margin: 0; }
+        .clave-grande { font-family: Consolas, monospace; font-size: 1.05rem; letter-spacing: .5px; color: var(--color-verde-oscuro); word-break: break-all; }
+        .chip { display: inline-flex; flex-direction: column; border: 1px solid var(--color-arena, #e5d9c3); border-radius: .6rem; padding: .3rem .6rem; margin: .2rem .3rem .2rem 0; max-width: 320px; }
+        .chip b { font-size: .64rem; text-transform: uppercase; color: var(--color-guinda); letter-spacing: .3px; }
+        .chip span { font-size: .8rem; color: #333; line-height: 1.2; }
+        .chip .sin-cat { color: #b7791f; }
+        .kpi { padding: 1rem 1.2rem; height: 100%; }
+        .kpi .etq { font-size: .7rem; text-transform: uppercase; font-weight: 700; color: var(--color-gris-oscuro, #6c757d); }
+        .kpi .valor { font-size: 1.45rem; font-weight: 800; color: var(--color-verde-oscuro); font-variant-numeric: tabular-nums; margin: .15rem 0; }
+        .kpi .sub { font-size: .74rem; color: #666; }
+        .kpi.principal { background: linear-gradient(135deg, #235B4E, #10312B); }
+        .kpi.principal .etq, .kpi.principal .sub { color: rgba(255,255,255,.8); }
+        .kpi.principal .valor { color: #fff; font-size: 1.75rem; }
+        .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .barra { display: flex; height: 34px; border-radius: 8px; overflow: hidden; background: #eef0f2; }
+        .barra > div { height: 100%; }
+        .leyenda { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin-top: .9rem; }
+        .leyenda .item { border-left: 4px solid; padding-left: .6rem; }
+        .leyenda .item b { display: block; font-size: .72rem; text-transform: uppercase; color: #555; }
+        .leyenda .item span { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .leyenda .item small { display: block; font-size: .72rem; color: #777; }
+        .puente { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .85rem; color: #444; }
+        .puente .op { color: #999; font-weight: 700; }
+        .puente .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+        .c-min { background: #9F2241; border-color: #9F2241 !important; }
+        .c-apa { background: #E39B23; border-color: #E39B23 !important; }
+        .c-dis { background: #235B4E; border-color: #235B4E !important; }
+        .c-lib { background: #A7AAAD; border-color: #A7AAAD !important; }
+        #tblMeses td, #tblMeses th { font-size: .8rem; vertical-align: middle; }
+        #tblMeses tr.actual td { background: #eef6f3; font-weight: 700; }
+        .mini { height: 8px; border-radius: 4px; background: #eef0f2; overflow: hidden; min-width: 90px; }
+        .mini > div { height: 100%; background: #9F2241; }
+        .tabla-chica td, .tabla-chica th { font-size: .78rem; vertical-align: middle; }
+        .clave-txt { font-family: Consolas, monospace; font-size: .72rem; word-break: break-all; white-space: normal; }
+        details.plegable > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+        details.plegable > summary::-webkit-details-marker { display: none; }
+        details.plegable > summary .flecha { transition: transform .2s; color: var(--color-guinda); }
+        details.plegable[open] > summary .flecha { transform: rotate(90deg); }
+        .badge-est { font-size: .66rem; padding: .25rem .5rem; border-radius: .4rem; }
+        .obra { border-left: 4px solid #BC955C; background: #faf7f1; border-radius: .5rem; padding: .6rem .9rem; }
+        .obra .proy { font-weight: 700; color: var(--color-verde-oscuro); font-size: .95rem; }
+        .obra .etq-obra { font-size: .64rem; text-transform: uppercase; font-weight: 700; color: #8a6d3b; letter-spacing: .3px; }
+        .obra ul { margin: .25rem 0 0; padding-left: 1.1rem; }
+        .obra li { font-size: .8rem; color: #444; }
+        .obra .nota { font-size: .76rem; color: #777; }
+        @media (max-width: 768px) { .leyenda { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     </style>
+    <script src="assets/js/SesionExpirada.js"></script>
 </head>
 <body>
     <!-- Navbar (Píldora Flotante) -->
@@ -103,694 +102,148 @@
 
     <!-- Main Content -->
     <main class="main-content mt-4">
-        <div class="container-fluid py-4">
-            
-            <div id="alertApartado" class="alert alert-warning text-white d-none" role="alert" style="background-color: #f6c23e; border-color: #f6c23e;">
-                <i class="fas fa-exclamation-triangle me-2"></i> 
-                <strong>Aviso:</strong> Existen apartados en curso. Si no se registra una adecuación en 7 días, el saldo volverá a estar disponible.
+        <div class="container-fluid py-3">
+
+            <!-- 1. La clave -->
+            <div class="glass-card p-3 mb-4">
+                <div class="d-flex justify-content-between flex-wrap gap-2 align-items-start">
+                    <div>
+                        <div class="text-xs text-uppercase text-muted font-weight-bold">Clave presupuestal · Ejercicio <span id="lblEjercicio">—</span></div>
+                        <div class="clave-grande" id="lblClave">Cargando…</div>
+                    </div>
+                </div>
+                <div id="bloqueObra" class="obra mt-2" style="display:none;"></div>
+                <div class="mt-2" id="chips"></div>
             </div>
 
-            <!-- KPIs Row -->
-            <div class="row mb-4">
-                <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
-                    <div class="card glass-card">
-                        <div class="card-body p-3">
-                            <div class="row">
-                                <div class="col-8">
-                                    <div class="numbers">
-                                        <p class="text-sm mb-0 text-uppercase font-weight-bold">Aprobado</p>
-                                        <h5 class="font-weight-bolder" style="color: var(--color-vino);" id="kpiAprobado">
-                                            $0.00
-                                        </h5>
-                                    </div>
-                                </div>
-                                <div class="col-4 text-end">
-                                    <div class="icon icon-shape bg-gradient-primary shadow-primary text-center rounded-circle">
-                                        <i class="fa-solid fa-coins text-lg opacity-10 text-white" aria-hidden="true"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <div id="alertas"></div>
+
+            <!-- 2. Lo que el usuario busca primero: el disponible -->
+            <div class="row g-3 mb-4">
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card kpi principal">
+                        <div class="etq">Disponible en <span id="lblMesActual">—</span></div>
+                        <div class="valor" id="kpiDisponibleMes">$0.00</div>
+                        <div class="sub" id="subDisponibleMes">Calendarizado del mes menos lo ministrado</div>
                     </div>
                 </div>
-                <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
-                    <div class="card glass-card">
-                        <div class="card-body p-3">
-                            <div class="row">
-                                <div class="col-8">
-                                    <div class="numbers">
-                                        <p class="text-sm mb-0 text-uppercase font-weight-bold">Modificado</p>
-                                        <h5 class="font-weight-bolder" style="color: var(--color-vino);" id="kpiModificado">
-                                            $0.00
-                                        </h5>
-                                    </div>
-                                </div>
-                                <div class="col-4 text-end">
-                                    <div class="icon icon-shape bg-gradient-primary shadow-primary text-center rounded-circle">
-                                        <i class="fa-solid fa-chart-line text-lg opacity-10 text-white" aria-hidden="true"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card kpi">
+                        <div class="etq">Disponible liberado (todo el año)</div>
+                        <div class="valor" id="kpiDisponible">$0.00</div>
+                        <div class="sub">Liberado − ministrado − apartado</div>
                     </div>
                 </div>
-                <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
-                    <div class="card glass-card">
-                        <div class="card-body p-3">
-                            <div class="row">
-                                <div class="col-8">
-                                    <div class="numbers">
-                                        <p class="text-sm mb-0 text-uppercase font-weight-bold">Devengado</p>
-                                        <h5 class="font-weight-bolder" style="color: var(--color-vino);" id="kpiDevengado">
-                                            $0.00
-                                        </h5>
-                                    </div>
-                                </div>
-                                <div class="col-4 text-end">
-                                    <div class="icon icon-shape bg-gradient-primary shadow-primary text-center rounded-circle">
-                                        <i class="fa-solid fa-file-invoice-dollar text-lg opacity-10 text-white" aria-hidden="true"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card kpi">
+                        <div class="etq">Modificado</div>
+                        <div class="valor" id="kpiModificado">$0.00</div>
+                        <div class="sub" id="subModificado">Aprobado + aumentos − disminuciones</div>
                     </div>
                 </div>
-                <div class="col-xl-3 col-sm-6">
-                    <div class="card glass-card">
-                        <div class="card-body p-3">
-                            <div class="row">
-                                <div class="col-8">
-                                    <div class="numbers">
-                                        <p class="text-sm mb-0 text-uppercase font-weight-bold">Pagado</p>
-                                        <h5 class="font-weight-bolder" style="color: var(--color-vino);" id="kpiPagado">
-                                            $0.00
-                                        </h5>
-                                    </div>
-                                </div>
-                                <div class="col-4 text-end">
-                                    <div class="icon icon-shape bg-gradient-primary shadow-primary text-center rounded-circle">
-                                        <i class="fa-solid fa-money-check-dollar text-lg opacity-10 text-white" aria-hidden="true"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card kpi">
+                        <div class="etq">Por liberar (mes cero)</div>
+                        <div class="valor" id="kpiPorLiberar">$0.00</div>
+                        <div class="sub">Se calendariza con una adecuación de liberación</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Desglose y Calendarizado -->
-            <div class="row mb-4">
-                <div class="col-lg-6">
-                    <div class="card glass-card h-100">
-                        <div class="card-header pb-0 bg-transparent">
-                            <h6 class="text-capitalize">Desglose de Clave Presupuestaria</h6>
+            <!-- 3. Cómo está el modificado -->
+            <div class="glass-card p-3 mb-4">
+                <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+                    <h6 class="sec-titulo">¿Cómo está el modificado?</h6>
+                    <div class="puente" id="puente"></div>
+                </div>
+                <div class="barra" id="barraModificado"></div>
+                <div class="leyenda">
+                    <div class="item c-min" style="background:none;"><b>Ministrado</b><span id="lgMin">$0.00</span><small id="pcMin">0 %</small></div>
+                    <div class="item c-apa" style="background:none;"><b>Apartado (adecuación en trámite)</b><span id="lgApa">$0.00</span><small id="pcApa">0 %</small></div>
+                    <div class="item c-dis" style="background:none;"><b>Disponible</b><span id="lgDis">$0.00</span><small id="pcDis">0 %</small></div>
+                    <div class="item c-lib" style="background:none;"><b>Por liberar</b><span id="lgLib">$0.00</span><small id="pcLib">0 %</small></div>
+                </div>
+                <div class="text-xs text-muted mt-3">
+                    Ejercido: devengado <b id="lblDevengado">$0.00</b> · pagado <b id="lblPagado">$0.00</b>
+                    <span class="ms-1">(se registran con el módulo de pagos).</span>
+                </div>
+            </div>
+
+            <!-- 4. Calendario por mes -->
+            <div class="row g-3 mb-4">
+                <div class="col-lg-7">
+                    <div class="glass-card p-3 h-100">
+                        <h6 class="sec-titulo mb-2">Calendario por mes</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0" id="tblMeses">
+                                <thead><tr><th>Mes</th><th class="num">Calendarizado</th><th class="num">Ministrado</th><th class="num">Disponible</th><th>Avance</th></tr></thead>
+                                <tbody></tbody>
+                                <tfoot></tfoot>
+                            </table>
                         </div>
-                        <div class="card-body p-3">
-                            <div class="table-responsive">
-                                <table class="table align-items-center mb-0 table-sm" id="tablaDesglose">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Dato</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Abrv</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Clave</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Descripción</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="contenidoDesglose">
-                                        <!-- Se llenará con JS -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <div class="text-xs text-muted mt-2">Los apartados todavía no se registran por mes; se descuentan del disponible del año.</div>
                     </div>
                 </div>
-
-                <div class="col-lg-6">
-                    <!-- Pastel -->
-                    <div class="card glass-card mb-4">
-                        <div class="card-header pb-0 bg-transparent">
-                            <h6 class="text-capitalize">Estado General de la Obra</h6>
-                        </div>
-                        <div class="card-body p-3">
-                            <div class="chart-summary-wrapper">
-                                <div class="chart-container">
-                                    <div id="piechart_3d" style="width: 100%; height: 250px;"></div>
-                                </div>
-                                <div class="summary-side">
-                                    <div class="summary-item">
-                                        <span class="summary-dot" style="background: #9F2241;"></span>
-                                        <span class="summary-label">Gastado</span>
-                                        <span class="summary-value" id="legGastado" style="color: #9F2241;">$0.00</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-dot" style="background: #235B4E;"></span>
-                                        <span class="summary-label">Saldo por Gastar</span>
-                                        <span class="summary-value" id="legSaldo" style="color: #235B4E;">$0.00</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-dot" style="background: #FF8C00;"></span>
-                                        <span class="summary-label">Apartado</span>
-                                        <span class="summary-value" id="legApartado" style="color: #FF8C00;">$0.00</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-dot" style="background: #6c757d;"></span>
-                                        <span class="summary-label">Por Liberar</span>
-                                        <span class="summary-value" id="legLiberar" style="color: #6c757d;">$0.00</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="col-lg-5">
+                    <div class="glass-card p-3 mb-3" id="cardApartados" style="display:none;">
+                        <h6 class="sec-titulo mb-2"><i class="fa-solid fa-hourglass-half me-2" style="color:#E39B23;"></i>Apartados activos</h6>
+                        <div id="listaApartados"></div>
                     </div>
-
-                    <!-- Progress Calendarizado -->
-                    <div class="card glass-card">
-                        <div class="card-header pb-0 bg-transparent d-flex justify-content-between align-items-center">
-                            <h6 class="text-capitalize">Progreso de Calendarizaci&oacute;n</h6>
-                            <button id="btnCalendarizar" class="btn btn-primary btn-sm mb-0 d-none" onclick="abrirModalCalendarizar()">Calendarizar Ahora</button>
-                        </div>
-                        <div class="card-body p-3">
-                            <div id="tablaCalendarizado">
-                                <!-- Generado por JS -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Detalles del Apartado (Dinamico) -->
-                    <div class="card glass-card mt-4 d-none" id="cardDetalleApartado">
-                        <div class="card-header pb-0 bg-transparent">
-                            <h6 class="text-capitalize mb-0"><i class="bi bi-info-circle text-warning me-2"></i>Detalles del Apartado</h6>
-                        </div>
-                        <div class="card-body p-3" id="detApartadoContainer">
-                            <!-- Los apartados se insertarán aquí dinámicamente -->
+                    <div class="glass-card p-3">
+                        <h6 class="sec-titulo mb-2">Historial de ministraciones</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm tabla-chica mb-0" id="tblMinistraciones">
+                                <thead><tr><th>Folio</th><th>Mes</th><th class="num">Importe</th><th>Estatus</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Obras Relacionadas -->
-            <div class="row mb-4">
-                <div class="col-lg-12">
-                    <div class="card glass-card h-100">
-                        <div class="card-header pb-0 bg-transparent">
-                            <h6 class="text-capitalize">Otras Fuentes de Financiamiento para esta Obra</h6>
-                        </div>
-                        <div class="card-body p-3">
-                            <div class="table-responsive">
-                                <table class="table align-items-center mb-0 table-sm" id="tablaObrasRelacionadas">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Clave Presupuestal</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aprobado</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Modificado</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Devengado</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Acci&oacute;n</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="contenidoObrasRelacionadas">
-                                        <tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+            <!-- 5. Historial de adecuaciones -->
+            <div class="glass-card p-3 mb-4">
+                <h6 class="sec-titulo mb-2">Historial de adecuaciones</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm tabla-chica mb-0">
+                        <thead><tr><th>Oficio</th><th>Fecha</th><th>Tipo de operación</th><th class="num">Monto</th><th></th></tr></thead>
+                        <tbody id="tbodyHistorialAdec"><tr><td colspan="5" class="text-center text-muted">Cargando…</td></tr></tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="row mb-4">
-                <div class="col-lg-6">
-                    <div class="card glass-card h-100">
-                        <div class="card-header pb-0 bg-transparent">
-                            <h6 class="text-capitalize">Historial de Adecuaciones</h6>
-                        </div>
-                        <div class="card-body p-3">
-                            <div class="table-responsive">
-                                <table class="table align-items-center mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Oficio / Fecha</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Tipo de Operación</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end">Monto Total Afectado</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Desglose</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbodyHistorialAdec">
-                                        <tr><td colspan="4" class="text-center text-muted">Aún no hay movimientos registrados para esta clave.</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+            <!-- 6. Información secundaria, plegada -->
+            <details class="glass-card p-3 mb-3 plegable" id="detProyecto">
+                <summary>
+                    <h6 class="sec-titulo">Otras claves del mismo proyecto <span class="text-muted font-weight-normal" id="lblNumProyecto"></span></h6>
+                    <i class="fa-solid fa-chevron-right flecha"></i>
+                </summary>
+                <div class="text-xs text-muted mt-2" id="lblPrefijo"></div>
+                <div class="table-responsive mt-2">
+                    <table class="table table-sm tabla-chica mb-0">
+                        <thead><tr><th>Partida</th><th>Municipio</th><th>Fondo</th><th class="num">Modificado</th><th class="num">Por liberar</th><th></th></tr></thead>
+                        <tbody id="tbodyProyecto"></tbody>
+                    </table>
                 </div>
+            </details>
 
-                <div class="col-lg-6">
-                    <div class="card glass-card h-100">
-                        <div class="card-header pb-0 bg-transparent">
-                            <h6 class="text-capitalize">Historial de Ministraciones</h6>
-                        </div>
-                        <div class="card-body p-3">
-                            <p class="text-sm text-secondary">Próximamente...</p>
-                        </div>
-                    </div>
+            <details class="glass-card p-3 mb-4 plegable">
+                <summary>
+                    <h6 class="sec-titulo">Desglose de la clave <span class="text-muted font-weight-normal" id="lblNumSegmentos"></span></h6>
+                    <i class="fa-solid fa-chevron-right flecha"></i>
+                </summary>
+                <div class="table-responsive mt-2">
+                    <table class="table table-sm tabla-chica mb-0">
+                        <thead><tr><th>Segmento</th><th>Abrev.</th><th>Valor</th><th>Descripción</th></tr></thead>
+                        <tbody id="contenidoDesglose"></tbody>
+                    </table>
                 </div>
-            </div>
-
+            </details>
         </div>
     </main>
 
-    <!-- Modal Calendarizar -->
-    <div class="modal fade" id="modalCalendarizar" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-gradient-primary">
-                    <h5 class="modal-title text-white">Calendarizar Presupuesto</h5>
-                </div>
-                <div class="modal-body">
-                    <p class="text-sm">Ingrese el monto a calendarizar por mes. La suma debe coincidir con el monto Aprobado (<b id="lblAprobadoModal"></b>).</p>
-                    <div class="row">
-                        <script>
-                            const mesesArr = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-                            mesesArr.forEach((m, i) => {
-                                document.write(`<div class="col-md-3 mb-3">
-                                    <label class="form-control-label text-xs">${m}</label>
-                                    <input type="number" class="form-control form-control-sm mes-input" id="mes_${i+1}" value="0">
-                                </div>`);
-                            });
-                        </script>
-                    </div>
-                    <div class="mt-3">
-                        <h6 class="text-end">Suma Total: <span id="lblSumaModal" class="text-danger">$0.00</span></h6>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success" onclick="guardarCalendarizacion()">Guardar Calendarizaci&oacute;n</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="assets/js/core/popper.min.js"></script>
     <script src="assets/js/core/bootstrap.min.js"></script>
-    <script src="https://code.highcharts.com/highcharts.js"></script>
-    <script src="https://code.highcharts.com/highcharts-3d.js"></script>
-    <script>
-        let montoAprobadoGlobal = 0;
-        let claveGlobal = "";
-
-        $(document).ready(function () {
-            const urlParams = new URLSearchParams(window.location.search);
-            const claveStr = urlParams.get('clave');
-            
-            if(claveStr) {
-                claveGlobal = claveStr;
-                $("#lblClavePrincipal").text("Clave: " + claveStr);
-                decodificarClaveAPI(claveStr);
-                cargarDatosFinancieros(claveStr);
-                cargarObrasRelacionadas(claveStr);
-                cargarHistorialAdecuaciones(claveStr);
-            } else {
-                $("#lblClavePrincipal").text("Error: Clave no proporcionada");
-            }
-
-            $('.mes-input').on('input', calcularSumaModal);
-        });
-
-        function decodificarClaveAPI(clave) {
-            $.ajax({
-                url: '/api/presupuesto/decodificar?clave=' + clave,
-                method: 'GET',
-                success: function(res) {
-                    if(res && res.Segmentos) {
-                        let html = "";
-                        res.Segmentos.forEach(seg => {
-                            html += `<tr>
-                                <td class="text-sm font-weight-bold">${seg.Nombre}</td>
-                                <td class="text-sm text-secondary">${seg.Abreviatura}</td>
-                                <td class="text-sm font-weight-bolder text-primary">${seg.Valor}</td>
-                                <td class="text-sm" style="white-space: normal; min-width: 200px;">${seg.Descripcion}</td>
-                            </tr>`;
-                        });
-                        $("#contenidoDesglose").html(html);
-                    }
-                }
-            });
-        }
-
-        function cargarHistorialAdecuaciones(clave) {
-            $.ajax({
-                url: 'api/adecuaciones/GetPorClave/' + clave,
-                method: 'GET',
-                success: function(res) {
-                    let html = '';
-                    let totalNeto = 0;
-                    if (res && res.length > 0) {
-                        res.forEach(item => {
-                            let f = item.FechaSolicitud;
-                            let fecha = "";
-                            if (f && f != "0001-01-01T00:00:00") {
-                                let fech = f.split('T')[0].split('-');
-                                fecha = fech[2] + "-" + fech[1] + "-" + fech[0];
-                            }
-                            
-                            let formattedTotal = "$" + parseFloat(item.Total).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-                            let tOp = item.TipoOperacion || 'MOVIMIENTO';
-                            
-                            let colorClass = (tOp.toUpperCase() === 'AMPLIACION' || tOp.toUpperCase() === 'AMPLIACIÓN') ? 'text-success' : 
-                                            (tOp.toUpperCase() === 'REDUCCION' || tOp.toUpperCase() === 'REDUCCIÓN') ? 'text-danger' : 'text-primary';
-
-                            if (tOp.toUpperCase() === 'REDUCCION' || tOp.toUpperCase() === 'REDUCCIÓN') {
-                                totalNeto -= parseFloat(item.Total || 0);
-                            } else {
-                                totalNeto += parseFloat(item.Total || 0);
-                            }
-
-                            html += `<tr>
-                                <td>
-                                    <div class="d-flex flex-column justify-content-center">
-                                        <h6 class="mb-0 text-sm">${item.NumOficio || 'Sin Oficio'}</h6>
-                                        <p class="text-xs text-secondary mb-0">${fecha}</p>
-                                    </div>
-                                </td>
-                                <td><span class="text-xs font-weight-bold ${colorClass}">${tOp}</span></td>
-                                <td class="align-middle text-end text-sm">
-                                    <span class="font-weight-bold ${colorClass}">${formattedTotal}</span>
-                                </td>
-                                <td class="align-middle text-center">
-                                    <a href="${item.NumOficio ? 'DetalleOficio.aspx?oficio=' + encodeURIComponent(item.NumOficio) : 'Adecuaciones.aspx'}" class="btn btn-primary btn-sm mb-0" data-toggle="tooltip" data-original-title="Ver Adecuación">
-                                        Ir al Oficio
-                                    </a>
-                                </td>
-                            </tr>`;
-                        });
-                        
-                        let formattedNeto = "$" + parseFloat(totalNeto).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-                        let colorNeto = totalNeto < 0 ? 'text-danger' : 'text-success';
-                        
-                        html += `<tr style="background-color: #f8f9fa;">
-                            <td colspan="2" class="text-end font-weight-bolder text-dark text-sm py-3" style="border-top: 2px solid #e9ecef;">Monto Neto de Adecuaciones:</td>
-                            <td class="align-middle text-end text-sm py-3" style="border-top: 2px solid #e9ecef;">
-                                <span class="font-weight-bolder ${colorNeto}" style="font-size: 1.1rem;">${formattedNeto}</span>
-                            </td>
-                            <td style="border-top: 2px solid #e9ecef;"></td>
-                        </tr>`;
-                    } else {
-                        html = '<tr><td colspan="4" class="text-center text-muted py-4">Aún no hay movimientos registrados para esta clave.</td></tr>';
-                    }
-                    $("#tbodyHistorialAdec").html(html);
-                },
-                error: function(err) {
-                    $("#tbodyHistorialAdec").html('<tr><td colspan="4" class="text-center text-danger py-4">Error al cargar el historial.</td></tr>');
-                }
-            });
-        }
-
-        function cargarDatosFinancieros(clave) {
-            $.ajax({
-                url: '/api/presupuesto/detalle?clave=' + clave,
-                method: 'GET',
-                success: function(res) {
-                    if(res) {
-                        const formater = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-                        montoAprobadoGlobal = res.Modificado || 0;
-
-                        $("#kpiAprobado").text(formater.format(res.Aprobado || 0));
-                        $("#kpiModificado").text(formater.format(res.Modificado || 0));
-                        $("#kpiDevengado").text(formater.format(res.Devengado || 0));
-                        $("#kpiPagado").text(formater.format(res.Pagado || 0));
-
-                        if (res.SaldoApartado && res.SaldoApartado > 0) {
-                            $("#alertApartado").removeClass("d-none");
-                            $("#cardDetalleApartado").removeClass("d-none");
-                            let apHtml = '';
-                            if (res.Apartados && res.Apartados.length > 0) {
-                                res.Apartados.forEach(ap => {
-                                    let f = new Date(ap.FechaApartado);
-                                    f.setDate(f.getDate() + 7);
-                                    let vencimiento = f.toLocaleDateString();
-                                    
-                                    apHtml += `
-                                    <div class="row mb-3 pb-3 border-bottom border-light">
-                                        <div class="col-md-4 mb-3 mb-md-0">
-                                            <p class="text-sm mb-1 text-muted font-weight-bold">Monto Apartado</p>
-                                            <h5 class="mb-0 text-warning">${formater.format(ap.Monto)}</h5>
-                                        </div>
-                                        <div class="col-md-4 mb-3 mb-md-0">
-                                            <p class="text-sm mb-1 text-muted font-weight-bold">Oficio / Referencia</p>
-                                            <p class="mb-0 font-weight-bold text-dark">${ap.Oficio || 'Sin oficio'}</p>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <p class="text-sm mb-1 text-muted font-weight-bold">Vencimiento</p>
-                                            <p class="mb-0 font-weight-bold text-danger">${vencimiento}</p>
-                                        </div>
-                                        <div class="col-12 mt-3 d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <p class="text-sm mb-1 text-muted font-weight-bold">Motivo / Justificación</p>
-                                                <p class="mb-0 text-sm">${ap.Motivo || 'Sin motivo'}</p>
-                                            </div>
-                                        </div>
-                                    </div>`;
-                                });
-                            }
-                            $("#detApartadoContainer").html(apHtml);
-                        } else {
-                            $("#alertApartado").addClass("d-none");
-                            $("#cardDetalleApartado").addClass("d-none");
-                        }
-
-                        renderPieChart(res);
-                        renderProgressBar(res);
-                    }
-                }
-            });
-        }
-
-        function cargarObrasRelacionadas(clave) {
-            if (clave.length < 22) return;
-            const prefijo = clave.substring(0, 22);
-            $.ajax({
-                url: '/api/presupuesto/obra?prefijo=' + prefijo,
-                method: 'GET',
-                success: function(res) {
-                    if(res && res.length > 0) {
-                        let html = "";
-                        const formater = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-                        res.forEach(item => {
-                            let badge = item.ClavePresupuestal === claveGlobal ? '<span class="badge bg-gradient-success ms-2">Actual</span>' : '';
-                            html += `<tr>
-                                <td class="text-sm font-weight-bold">${item.ClavePresupuestal} ${badge}</td>
-                                <td class="text-sm">${formater.format(item.Aprobado || 0)}</td>
-                                <td class="text-sm">${formater.format(item.Modificado || 0)}</td>
-                                <td class="text-sm text-primary">${formater.format(item.Devengado || 0)}</td>
-                                <td class="text-sm">
-                                    <a href="DetalleClave.aspx?clave=${item.ClavePresupuestal}" class="btn btn-primary btn-sm mb-0">Ver Detalle</a>
-                                </td>
-                            </tr>`;
-                        });
-                        $("#contenidoObrasRelacionadas").html(html);
-                    } else {
-                        $("#contenidoObrasRelacionadas").html('<tr><td colspan="5" class="text-center text-muted">No hay otras fuentes para esta obra.</td></tr>');
-                    }
-                },
-                error: function() {
-                }
-            });
-        }
-
-        function renderPieChart(data) {
-            let totalGastado = data.GastadoPorAdecuacion || 0;
-            
-            const meses = [data.Enero, data.Febrero, data.Marzo, data.Abril, data.Mayo, data.Junio, data.Julio, data.Agosto, data.Septiembre, data.Octubre, data.Noviembre, data.Diciembre];
-            let sumaCal = 0;
-            for(let i=0; i<12; i++) {
-                sumaCal += (parseFloat(meses[i]) || 0);
-            }
-
-            let apartado = data.SaldoApartado || 0;
-            // El Saldo Real Disponible es el Modificado menos lo apartado.
-            // No le restamos totalGastado (Adecuaciones) porque el Modificado ya viene con la reducción aplicada.
-            // Las adecuaciones (reducciones) reducen el pastel total, no se restan de nuevo del saldo.
-            let saldo = sumaCal - apartado;
-            if (saldo < 0) saldo = 0;
-
-            // Por liberar solo compara el Modificado contra lo calendarizado. Las reducciones bajan el modificado,
-            // por lo tanto no deben generar un falso "por liberar".
-            let porLiberar = (data.Modificado || 0) - sumaCal;
-            if (porLiberar < 0) porLiberar = 0;
-
-            const formaterLegend = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-            document.getElementById('legGastado').innerText = formaterLegend.format(totalGastado);
-            document.getElementById('legSaldo').innerText = formaterLegend.format(saldo);
-            document.getElementById('legApartado').innerText = formaterLegend.format(apartado);
-            document.getElementById('legLiberar').innerText = formaterLegend.format(porLiberar);
-
-            let chartData = [];
-            let chartColors = [];
-
-            if (totalGastado === 0 && saldo === 0 && porLiberar === 0 && apartado === 0) {
-                chartData = [{ name: 'Sin Asignación Inicial', y: 1 }];
-                chartColors = ['#e9ecef'];
-            } else {
-                if (totalGastado > 0) {
-                    chartData.push({ name: 'Gastado (Candado/Adecuaciones)', y: totalGastado });
-                    chartColors.push('#9F2241');
-                }
-                if (saldo > 0) {
-                    chartData.push({ name: 'Saldo por Gastar', y: saldo });
-                    chartColors.push('#235B4E');
-                }
-                if (apartado > 0) {
-                    if (data.Apartados && data.Apartados.length > 0) {
-                        data.Apartados.forEach((ap, idx) => {
-                            chartData.push({ name: 'Apartado: ' + (ap.Oficio || ('#' + (idx + 1))), y: ap.Monto });
-                            chartColors.push('#FF8C00');
-                        });
-                    } else {
-                        chartData.push({ name: 'Saldo Apartado', y: apartado });
-                        chartColors.push('#FF8C00');
-                    }
-                }
-                if (porLiberar > 0) {
-                    chartData.push({ name: 'Por Liberar', y: porLiberar });
-                    chartColors.push('#6c757d');
-                }
-            }
-
-            Highcharts.chart('piechart_3d', {
-                chart: { type: 'pie', backgroundColor: 'transparent', options3d: { enabled: true, alpha: 45, beta: 0 } },
-                title: { text: null },
-                tooltip: { 
-                    pointFormatter: function() {
-                        if (this.name === 'Sin Asignación Inicial') return '<b>$ 0.00</b>';
-                        return '<b>$ ' + Highcharts.numberFormat(this.y, 2, '.', ',') + '</b>';
-                    }
-                },
-                plotOptions: {
-                    pie: {
-                        allowPointSelect: true, cursor: 'pointer', depth: 45,
-                        dataLabels: { enabled: true, format: '<b>{point.name}</b>' }
-                    }
-                },
-                series: [{
-                    type: 'pie',
-                    name: 'Presupuesto',
-                    colors: chartColors,
-                    data: chartData
-                }],
-                credits: { enabled: false }
-            });
-        }
-
-        function renderProgressBar(data) {
-            const meses = [data.Enero, data.Febrero, data.Marzo, data.Abril, data.Mayo, data.Junio, data.Julio, data.Agosto, data.Septiembre, data.Octubre, data.Noviembre, data.Diciembre];
-            const nombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            
-            let htmlBarras = "";
-            let htmlEtiquetas = "";
-            let htmlMontos = "";
-            let sumaCal = 0;
-            let acumulado = 0;
-            const formater = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-
-            for(let i=0; i<12; i++) {
-                let val = parseFloat(meses[i]) || 0;
-                sumaCal += val;
-                
-                let color = '#e9ecef';
-                if (val > 0) {
-                    color = '#235B4E'; // Verde para saldo por gastar
-                }
-                
-                let borderRight = i < 11 ? '1px solid white' : 'none';
-                
-                htmlBarras += `<div style="flex: 1; background-color: ${color}; border-right: ${borderRight};" title="${nombres[i]}: ${formater.format(val)}"></div>`;
-                htmlEtiquetas += `<div style="flex: 1; text-align: center;">${nombres[i]}</div>`;
-                
-                let textColor = val > 0 ? "text-dark font-weight-bold" : "text-muted";
-                htmlMontos += `<div style="flex: 1; text-align: center;" class="${textColor} text-xxs">${formater.format(val)}</div>`;
-            }
-
-            let porLiberar = montoAprobadoGlobal - sumaCal;
-            if (porLiberar < 0) porLiberar = 0;
-
-            let htmlCompleto = `
-                <div class="d-flex w-100 justify-content-between mb-1 mt-2" style="border-radius: 10px; overflow: hidden; height: 30px; background: #e9ecef;">
-                    ${htmlBarras}
-                </div>
-                <div class="d-flex w-100 justify-content-between text-xs text-muted mb-1 mt-2 px-1">
-                    ${htmlEtiquetas}
-                </div>
-                <div class="d-flex w-100 justify-content-between text-xs mb-3 px-1">
-                    ${htmlMontos}
-                </div>
-                <div class="d-flex justify-content-between mt-3 px-2 border-top pt-3 bg-light rounded" style="padding-bottom: 0.5rem;">
-                    <div><span class="text-uppercase text-secondary font-weight-bolder text-xxs">Aprobado:</span> <span class="text-sm font-weight-bold text-dark ms-1">${formater.format(montoAprobadoGlobal)}</span></div>
-                    <div><span class="text-uppercase text-secondary font-weight-bolder text-xxs">Suma Total:</span> <span class="text-sm font-weight-bold text-primary ms-1">${formater.format(sumaCal)}</span></div>
-                    <div><span class="text-uppercase text-secondary font-weight-bolder text-xxs">Por Liberar:</span> <span class="text-sm font-weight-bold ${porLiberar > 0 ? 'text-danger' : 'text-success'} ms-1">${formater.format(porLiberar)}</span></div>
-                </div>
-            `;
-
-            $("#tablaCalendarizado").html(htmlCompleto);
-            
-            // Se elimina el botón de calendarizar manualmente para claves nuevas / Por Liberar.
-            // La calendarización ahora solo se permite estrictamente mediante adecuaciones de liberación.
-            $("#btnCalendarizar").addClass('d-none');
-        }
-
-        function abrirModalCalendarizar() {
-            const formater = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-            $("#lblAprobadoModal").text(formater.format(montoAprobadoGlobal));
-            $('#modalCalendarizar').modal('show');
-            calcularSumaModal();
-        }
-
-        function calcularSumaModal() {
-            let suma = 0;
-            $('.mes-input').each(function() {
-                suma += parseFloat($(this).val()) || 0;
-            });
-            const formater = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-            $("#lblSumaModal").text(formater.format(suma));
-            
-            if (Math.abs(suma - montoAprobadoGlobal) < 1) {
-                $("#lblSumaModal").removeClass('text-danger').addClass('text-success');
-            } else {
-                $("#lblSumaModal").removeClass('text-success').addClass('text-danger');
-            }
-        }
-
-        function guardarCalendarizacion() {
-            let suma = 0;
-            let payload = { ClavePresupuestal: claveGlobal };
-            const nombresCompletos = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-            
-            $('.mes-input').each(function(i) {
-                let val = parseFloat($(this).val()) || 0;
-                suma += val;
-                payload[nombresCompletos[i]] = val;
-            });
-
-            if (Math.abs(suma - montoAprobadoGlobal) > 1 && montoAprobadoGlobal > 0) {
-                swal.fire('Error', 'La suma de los meses no coincide con el monto aprobado.', 'error');
-                return;
-            }
-
-            // Llamada e a la base de datos real
-            $.ajax({
-                url: '/api/presupuesto/calendarizar',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
-                success: function() {
-                    $('#modalCalendarizar').modal('hide');
-                    swal.fire('Éxito', 'Presupuesto calendarizado correctamente.', 'success');
-                    cargarDatosFinancieros(claveGlobal);
-                },
-                error: function(err) {
-                    console.error("Error al guardar:", err);
-                    swal.fire('Error', 'Hubo un problema de conexión al guardar los datos en la base de datos.', 'error');
-                }
-            });
-        }
-    </script>
+    <script src="assets/js/DetalleClave.js?v=2"></script>
 </body>
 </html>

@@ -208,9 +208,11 @@
     <Content Include="Adecuaciones.aspx" />
     <Content Include="assets\css\argon-dashboard.css" />
     <Content Include="assets\css\argon-dashboard.min.css" />
+    <Content Include="assets\css\bootstrap.css" />
     <Content Include="assets\css\bootstrap.min.css" />
     <Content Include="assets\css\dataTables.bootstrap5.min.css" />
     <Content Include="assets\css\demo.css" />
+    <Content Include="assets\css\gobierno-theme.css" />
     <Content Include="assets\css\googleapis.css" />
     <Content Include="assets\css\images\animated-overlay.gif" />
     <Content Include="assets\css\images\lst_bg.png" />
@@ -283,12 +285,15 @@
     <Content Include="assets\js\argon-dashboard.js" />
     <Content Include="assets\js\argon-dashboard.min.js" />
     <Content Include="assets\js\bootstrap-datepicker.min.js" />
+    <Content Include="assets\js\bootstrap.js" />
     <Content Include="assets\js\buttons.js" />
     <Content Include="assets\js\ConfiguracionGeneral.js" />
     <Content Include="assets\js\core\bootstrap.bundle.min.js" />
     <Content Include="assets\js\core\bootstrap.min.js" />
     <Content Include="assets\js\core\popper.min.js" />
+    <Content Include="assets\js\Correspondencia.js" />
     <Content Include="assets\js\dataTables.bootstrap5.min.js" />
+    <Content Include="assets\js\DetalleOficio.js" />
     <Content Include="assets\js\EliminarSesion.js" />
     <Content Include="assets\js\flatpickr.min.js" />
     <Content Include="assets\js\jquery-3.5.1.js" />
@@ -296,13 +301,17 @@
     <Content Include="assets\js\jquery-ui-1.8.custom.min.js" />
     <Content Include="assets\js\jquery.dataTables.min.js" />
     <Content Include="assets\js\kitfontaweson.js" />
+    <Content Include="assets\js\Ministracion.js" />
+    <Content Include="assets\js\moment.min.js" />
     <Content Include="assets\js\plugins\bootstrap-notify.js" />
     <Content Include="assets\js\plugins\Chart.extension.js" />
     <Content Include="assets\js\plugins\chartjs.min.js" />
     <Content Include="assets\js\plugins\perfect-scrollbar.min.js" />
     <Content Include="assets\js\plugins\smooth-scrollbar.min.js" />
+    <Content Include="assets\js\PresupuestoConsulta.js" />
     <Content Include="assets\js\select2.js" />
     <Content Include="assets\js\select2.min.js" />
+    <Content Include="assets\js\SesionExpirada.js" />
     <Content Include="assets\js\SweetAlert2\bootstrap4\css\bootstrap-grid.css" />
     <Content Include="assets\js\SweetAlert2\bootstrap4\css\bootstrap-grid.min.css" />
     <Content Include="assets\js\SweetAlert2\bootstrap4\css\bootstrap-reboot.css" />
@@ -433,9 +442,11 @@
     <Compile Include="Data\Seguimiento.cs" />
     <Compile Include="Data\Turnado.cs" />
     <Compile Include="DbConnectionFactory.cs" />
+    <Compile Include="Helpers\Seguridad.cs" />
     <Compile Include="Models\PresupuestoConsultaModels.cs" />
     <Compile Include="Models\PresupuestoInicialModels.cs" />
     <Compile Include="Repositories\EstructuraClaveRepository.cs" />
+    <Compile Include="Repositories\SicofinRepository.cs" />
     <Compile Include="Services\ClavePresupuestalService.cs" />
     <Compile Include="Services\PresupuestoConsultaService.cs" />
     <Compile Include="Services\PresupuestoInicialService.cs" />
@@ -754,7 +765,6 @@
     <Content Include="obj\Debug\SIAP.csproj.CoreCompileInputs.cache" />
     <Content Include="obj\Release\SIAP.csproj.AssemblyReference.cache" />
     <None Include="packages.config" />
-    <Content Include="test.ps1" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>

@@ -70,6 +70,7 @@
       a.module-link { text-decoration: none; color: inherit; }
       a.module-link:hover { color: inherit; }
     </style>
+    <script src="assets/js/SesionExpirada.js"></script>
 </head>
 <body class="g-sidenav-show virtual-reality">
     <form id="form1" runat="server" enctype="multipart/form-data">

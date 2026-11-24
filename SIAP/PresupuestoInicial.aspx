@@ -35,6 +35,7 @@
     <script type="text/javascript">
         if (sessionStorage.getItem('name') == null) { window.location.href = "Login.aspx"; }
     </script>
+    <script src="assets/js/SesionExpirada.js"></script>
 </head>
 <body class="g-sidenav-show">
     <form id="form1" runat="server" onsubmit="return false;">

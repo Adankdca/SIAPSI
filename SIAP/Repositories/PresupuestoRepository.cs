@@ -53,7 +53,7 @@ namespace SIAP.Repositories
                         (ISNULL(p.Aprobado, 0) + ISNULL(p.Aumentos, 0) - ISNULL(p.Disminuciones, 0)) AS Modificado,
                         ISNULL(p.Pagado, 0) AS Pagado,
                         ISNULL(p.Pagado, 0) AS Ministerio,
-                        (SELECT ISNULL(SUM(Monto), 0) FROM apartados_presupuesto a WHERE a.ClavePresupuestal = p.ClavePresupuestal AND a.Activo = 1 AND a.FechaApartado >= DATEADD(DAY, -7, GETDATE())) AS SaldoApartado,
+                        (SELECT ISNULL(SUM(Monto), 0) FROM apartados_presupuesto a WHERE a.ClavePresupuestal = p.ClavePresupuestal AND a.Activo = 1) AS SaldoApartado,
                         CASE WHEN (ISNULL(p.Enero,0) + ISNULL(p.Febrero,0) + ISNULL(p.Marzo,0) + ISNULL(p.Abril,0) + ISNULL(p.Mayo,0) + ISNULL(p.Junio,0) + ISNULL(p.Julio,0) + ISNULL(p.Agosto,0) + ISNULL(p.Septiembre,0) + ISNULL(p.Octubre,0) + ISNULL(p.Noviembre,0) + ISNULL(p.Diciembre,0)) > 0 THEN 1 ELSE 0 END AS EsCalendarizada,
                         COALESCE(sg.MpioValor, SUBSTRING(p.ClavePresupuestal, 23, 3)) AS ClaveMunicipio,
                         COALESCE(m.Nombre, (SELECT TOP 1 Nombre FROM cat_municipio WHERE Clave = SUBSTRING(p.ClavePresupuestal, 23, 3))) AS NombreMunicipio,
@@ -98,7 +98,7 @@ namespace SIAP.Repositories
                         p.Devengado, p.Pagado, p.Disminuciones AS GastadoPorAdecuacion,
                         p.Enero, p.Febrero, p.Marzo, p.Abril, p.Mayo, p.Junio,
                         p.Julio, p.Agosto, p.Septiembre, p.Octubre, p.Noviembre, p.Diciembre,
-                        (SELECT ISNULL(SUM(Monto), 0) FROM apartados_presupuesto WHERE ClavePresupuestal = @Clave AND Activo = 1 AND FechaApartado >= DATEADD(DAY, -7, GETDATE())) AS SaldoApartado
+                        (SELECT ISNULL(SUM(Monto), 0) FROM apartados_presupuesto WHERE ClavePresupuestal = @Clave AND Activo = 1) AS SaldoApartado
                     FROM presupuestocalendarizado p
                     WHERE p.ClavePresupuestal = @Clave;
                 ";
@@ -123,7 +123,7 @@ namespace SIAP.Repositories
                     int.TryParse(cpStr, out anioClave);
 
                     // Poblamos la lista de apartados activos
-                    string apQuery = "SELECT Id, Monto, Motivo, Oficio, FechaApartado FROM apartados_presupuesto WHERE ClavePresupuestal = @Clave AND Activo = 1 AND FechaApartado >= DATEADD(DAY, -7, GETDATE()) ORDER BY FechaApartado DESC";
+                    string apQuery = "SELECT Id, Monto, Motivo, Oficio, FechaApartado FROM apartados_presupuesto WHERE ClavePresupuestal = @Clave AND Activo = 1 ORDER BY FechaApartado DESC";
                     dto.Apartados = db.Query<ApartadoDto>(apQuery, new { Clave = clave }).AsList();
 
 

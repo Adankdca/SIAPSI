@@ -32,6 +32,7 @@
             border-bottom-right-radius: 0.75rem !important;
         }
     </style>
+    <script src="assets/js/SesionExpirada.js"></script>
 </head>
 <body class="g-sidenav-show virtual-reality">
     <form id="form1" runat="server">

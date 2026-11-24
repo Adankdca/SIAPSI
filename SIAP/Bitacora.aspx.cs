@@ -8,18 +8,8 @@ namespace SIAP
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["UsuarioId"] == null)
-            {
-                Response.Redirect("Login.aspx");
-                return;
-            }
-
-            // Only allow admins
-            if (Session["UsuarioRol"] == null || Session["UsuarioRol"].ToString() != "Administrador")
-            {
-                Response.Redirect("Menu.aspx");
-                return;
-            }
+            // Sin sesión: al Login con aviso de sesión expirada. Sin permiso: al Menú.
+            Seguridad.Requerir(this, soloAdministrador: true);
 
             if (!IsPostBack)
             {

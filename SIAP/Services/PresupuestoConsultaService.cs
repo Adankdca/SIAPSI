@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -149,8 +149,7 @@ namespace SIAP.Services
                            ISNULL(p.Disminuciones,0) AS Disminuciones, ISNULL(p.Modificado,0) AS Modificado,
                            ISNULL(p.Liberado,0) AS Liberado, ISNULL(p.PorLiberar,0) AS PorLiberar,
                            (SELECT ISNULL(SUM(a.Monto),0) FROM dbo.apartados_presupuesto a
-                             WHERE a.ClavePresupuestal = p.ClavePresupuestal AND a.Activo = 1
-                               AND a.FechaApartado >= DATEADD(DAY, -7, GETDATE())) AS SaldoApartado,
+                             WHERE a.ClavePresupuestal = p.ClavePresupuestal AND ISNULL(a.Activo, 1) = 1) AS SaldoApartado,
                            CAST(CASE WHEN " + SumaMeses + @" > 0 THEN 1 ELSE 0 END AS BIT) AS EsCalendarizada
                     FROM dbo.presupuestocalendarizado p " + where + @"
                     ORDER BY " + orden + @"
@@ -163,28 +162,190 @@ namespace SIAP.Services
 
         private void LlenarSegmentos(IDbConnection db, List<MatrizFilaDto> filas, Dictionary<string, SegmentoEstructura> porAbrev)
         {
-            if (filas.Count == 0) return;
-            var porId = filas.ToDictionary(x => x.Id);
-            // De 1000 en 1000 para no rebasar el límite de 2100 parámetros de SQL Server
-            for (int k = 0; k < filas.Count; k += 1000)
+            var segs = SegmentosDe(db, filas.Select(x => x.Id).ToList(), porAbrev);
+            foreach (var f in filas)
             {
-                var ids = filas.Skip(k).Take(1000).Select(x => x.Id).ToList();
+                Dictionary<string, SegmentoCelda> d;
+                if (segs.TryGetValue(f.Id, out d)) f.Segmentos = d;
+            }
+        }
+
+        /// <summary>Segmentos guardados (con su descripción de catálogo) de varias claves, por Id de clave.</summary>
+        private Dictionary<int, Dictionary<string, SegmentoCelda>> SegmentosDe(IDbConnection db, List<int> idsClave,
+                                                                                Dictionary<string, SegmentoEstructura> porAbrev,
+                                                                                IDbTransaction tx = null)
+        {
+            var res = new Dictionary<int, Dictionary<string, SegmentoCelda>>();
+            // De 1000 en 1000 para no rebasar el límite de 2100 parámetros de SQL Server
+            for (int k = 0; k < idsClave.Count; k += 1000)
+            {
+                var ids = idsClave.Skip(k).Take(1000).ToList();
                 var segs = db.Query<SegmentoGuardado>(@"
                     SELECT Id, PresupuestoCalendarizadoId, Abreviatura, Valor, CatalogoId
-                    FROM dbo.presupuesto_segmentos WHERE PresupuestoCalendarizadoId IN @ids", new { ids });
+                    FROM dbo.presupuesto_segmentos WHERE PresupuestoCalendarizadoId IN @ids", new { ids }, tx);
                 foreach (var s in segs)
                 {
                     SegmentoEstructura est;
                     porAbrev.TryGetValue(s.Abreviatura, out est);
                     bool tieneCatalogo = est != null && !string.IsNullOrWhiteSpace(est.TablaCatalogo);
                     string desc = s.CatalogoId.HasValue ? _claves.DescripcionPorId(est, s.CatalogoId.Value) : null;
-                    porId[s.PresupuestoCalendarizadoId].Segmentos[s.Abreviatura] = new SegmentoCelda
-                    {
-                        Valor = s.Valor,
-                        Descripcion = desc,
-                        SinCatalogo = tieneCatalogo && !s.CatalogoId.HasValue
-                    };
+                    Dictionary<string, SegmentoCelda> d;
+                    if (!res.TryGetValue(s.PresupuestoCalendarizadoId, out d))
+                        res[s.PresupuestoCalendarizadoId] = d = new Dictionary<string, SegmentoCelda>(StringComparer.OrdinalIgnoreCase);
+                    d[s.Abreviatura] = new SegmentoCelda { Valor = s.Valor, Descripcion = desc, SinCatalogo = tieneCatalogo && !s.CatalogoId.HasValue };
                 }
+            }
+            return res;
+        }
+
+        // ------------------------------------------------------------------ detalle de una clave
+
+        private static readonly string[] NombresMes =
+            { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre" };
+
+        private class FilaDetalle
+        {
+            public int Id { get; set; }
+            public string ClavePresupuestal { get; set; }
+            public int? Ejercicio { get; set; }
+            public decimal Aprobado { get; set; }
+            public decimal Aumentos { get; set; }
+            public decimal Disminuciones { get; set; }
+            public decimal Devengado { get; set; }
+            public decimal Pagado { get; set; }
+            public decimal Enero { get; set; }
+            public decimal Febrero { get; set; }
+            public decimal Marzo { get; set; }
+            public decimal Abril { get; set; }
+            public decimal Mayo { get; set; }
+            public decimal Junio { get; set; }
+            public decimal Julio { get; set; }
+            public decimal Agosto { get; set; }
+            public decimal Septiembre { get; set; }
+            public decimal Octubre { get; set; }
+            public decimal Noviembre { get; set; }
+            public decimal Diciembre { get; set; }
+            public decimal[] Meses()
+            {
+                return new[] { Enero, Febrero, Marzo, Abril, Mayo, Junio, Julio, Agosto, Septiembre, Octubre, Noviembre, Diciembre };
+            }
+        }
+
+        private class MinistradoMes
+        {
+            public int Mes { get; set; }
+            public decimal Monto { get; set; }
+        }
+
+        /// <summary>
+        /// Todo lo que muestra la pantalla de detalle de una clave, ya calculado y cuadrado.
+        /// Lo ministrado se cuenta como en el módulo de Ministraciones: importe de las que no están CANCELADAS.
+        /// El apartado es el de los apartados activos (sin límite de días).
+        /// </summary>
+        public DetalleClaveDto DetalleClave(string clave)
+        {
+            clave = (clave ?? "").Trim();
+            using (var db = DbConnectionFactory.GetConnection())
+            {
+                var f = db.QueryFirstOrDefault<FilaDetalle>(@"
+                    SELECT TOP 1 p.Id, p.ClavePresupuestal, p.Ejercicio,
+                           ISNULL(p.Aprobado,0) AS Aprobado, ISNULL(p.Aumentos,0) AS Aumentos, ISNULL(p.Disminuciones,0) AS Disminuciones,
+                           ISNULL(p.Devengado,0) AS Devengado, ISNULL(p.Pagado,0) AS Pagado,
+                           ISNULL(p.Enero,0) AS Enero, ISNULL(p.Febrero,0) AS Febrero, ISNULL(p.Marzo,0) AS Marzo,
+                           ISNULL(p.Abril,0) AS Abril, ISNULL(p.Mayo,0) AS Mayo, ISNULL(p.Junio,0) AS Junio,
+                           ISNULL(p.Julio,0) AS Julio, ISNULL(p.Agosto,0) AS Agosto, ISNULL(p.Septiembre,0) AS Septiembre,
+                           ISNULL(p.Octubre,0) AS Octubre, ISNULL(p.Noviembre,0) AS Noviembre, ISNULL(p.Diciembre,0) AS Diciembre
+                    FROM dbo.presupuestocalendarizado p
+                    WHERE p.ClavePresupuestal = @clave
+                    ORDER BY p.Ejercicio DESC", new { clave });
+                if (f == null) return null;
+
+                int anio = f.Ejercicio ?? DateTime.Today.Year;
+                var d = new DetalleClaveDto
+                {
+                    Id = f.Id, ClavePresupuestal = f.ClavePresupuestal, Ejercicio = f.Ejercicio,
+                    Aprobado = f.Aprobado, Aumentos = f.Aumentos, Disminuciones = f.Disminuciones,
+                    Devengado = f.Devengado, Pagado = f.Pagado
+                };
+                d.Modificado = d.Aprobado + d.Aumentos - d.Disminuciones;
+                d.MesActual = anio < DateTime.Today.Year ? 12 : anio > DateTime.Today.Year ? 1 : DateTime.Today.Month;
+
+                // Ministraciones de la clave en su ejercicio
+                d.Ministraciones = db.Query<MinistracionClaveDto>(@"
+                    SELECT m.Id, m.Folio, m.Mes, ISNULL(m.Importe_total,0) AS Importe, ISNULL(m.Estatus, N'REGISTRADA') AS Estatus,
+                           m.Concepto, m.FechaCreacion AS Fecha
+                    FROM dbo.ministraciones m
+                    WHERE (m.PresupuestoCalendarizadoId = @id OR m.ClavePresupuestal = @clave) AND m.Anio = @anio
+                    ORDER BY m.Mes, m.FechaCreacion", new { id = f.Id, clave = f.ClavePresupuestal, anio }).ToList();
+                var ministradoMes = d.Ministraciones
+                    .Where(m => !string.Equals(m.Estatus, "CANCELADA", StringComparison.OrdinalIgnoreCase))
+                    .GroupBy(m => m.Mes).ToDictionary(g => g.Key, g => g.Sum(m => m.Importe));
+
+                var cal = f.Meses();
+                for (int i = 0; i < 12; i++)
+                {
+                    decimal min;
+                    ministradoMes.TryGetValue(i + 1, out min);
+                    d.Meses.Add(new MesClaveDto
+                    {
+                        Mes = i + 1, Nombre = NombresMes[i], Calendarizado = cal[i], Ministrado = min,
+                        Disponible = cal[i] - min, EsMesActual = i + 1 == d.MesActual
+                    });
+                }
+                d.Liberado = cal.Sum();
+                d.PorLiberar = d.Modificado - d.Liberado;
+                d.Ministrado = d.Meses.Sum(m => m.Ministrado);
+
+                d.Apartados = db.Query<ApartadoClaveDto>(@"
+                    SELECT Id, ISNULL(Monto,0) AS Monto, Oficio, Motivo, FechaApartado
+                    FROM dbo.apartados_presupuesto
+                    WHERE ClavePresupuestal = @clave AND ISNULL(Activo, 1) = 1
+                    ORDER BY FechaApartado DESC", new { clave = f.ClavePresupuestal }).ToList();
+                d.Apartado = d.Apartados.Sum(a => a.Monto);
+                d.Disponible = d.Liberado - d.Ministrado - d.Apartado;
+
+                // Segmentos de la clave y otras claves del mismo proyecto (mismos segmentos de UR a PT)
+                var estructura = _estructuraRepo.ObtenerEstructura(anio);
+                var porAbrev = estructura.ToDictionary(x => x.Abreviatura, StringComparer.OrdinalIgnoreCase);
+                var pt = estructura.FirstOrDefault(x => x.Abreviatura == "PT");
+                var ids = new List<int> { f.Id };
+                if (pt != null && f.ClavePresupuestal.Length >= pt.Posicion + pt.Longitud - 1)
+                {
+                    d.PrefijoProyecto = f.ClavePresupuestal.Substring(0, pt.Posicion + pt.Longitud - 1);
+                    d.ClavesDelProyecto = db.Query<ClaveProyectoDto>(@"
+                        SELECT p.Id, p.ClavePresupuestal,
+                               ISNULL(p.Aprobado,0) + ISNULL(p.Aumentos,0) - ISNULL(p.Disminuciones,0) AS Modificado,
+                               " + SumaMeses + @" AS Liberado,
+                               ISNULL(p.Aprobado,0) + ISNULL(p.Aumentos,0) - ISNULL(p.Disminuciones,0) - " + SumaMeses + @" AS PorLiberar
+                        FROM dbo.presupuestocalendarizado p
+                        WHERE p.Ejercicio = @anio AND p.ClavePresupuestal LIKE @prefijo AND p.Id <> @id
+                        ORDER BY p.ClavePresupuestal",
+                        new { anio, prefijo = d.PrefijoProyecto.Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]") + "%", id = f.Id }).ToList();
+                    ids.AddRange(d.ClavesDelProyecto.Select(c => c.Id));
+                }
+                var segs = SegmentosDe(db, ids, porAbrev);
+                Dictionary<string, SegmentoCelda> sd;
+                if (segs.TryGetValue(f.Id, out sd)) d.Segmentos = sd;
+                foreach (var c in d.ClavesDelProyecto)
+                    if (segs.TryGetValue(c.Id, out sd)) c.Segmentos = sd;
+
+                // Obra en BDSICOFIN (si falla, la pantalla se muestra igual con un aviso)
+                if (!SicofinRepository.Configurado)
+                    d.AvisoSicofin = "La consulta a BDSICOFIN no está configurada.";
+                else if (estructura.Count > 0 && f.ClavePresupuestal.Length == estructura[0].LongitudClave)
+                {
+                    try
+                    {
+                        d.ClaveCortaSicofin = SicofinRepository.ClaveCorta(f.ClavePresupuestal, estructura);
+                        d.Obras = new SicofinRepository().ObrasDeClave(f.ClavePresupuestal, anio, estructura);
+                        d.NombreObra = d.Obras.Select(o => o.Proyecto).FirstOrDefault(p => !string.IsNullOrWhiteSpace(p));
+                    }
+                    catch (Exception ex)
+                    {
+                        d.AvisoSicofin = "No se pudo consultar BDSICOFIN: " + ex.Message;
+                    }
+                }
+                return d;
             }
         }
 

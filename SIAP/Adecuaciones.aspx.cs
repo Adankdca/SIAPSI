@@ -13,11 +13,8 @@ namespace SIAP
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["UsuarioId"] == null || Session["VerAdecuaciones"] == null || !(bool)Session["VerAdecuaciones"])
-            {
-                Response.Redirect("Login.aspx");
-                return;
-            }
+            // Sin sesión: al Login con aviso de sesión expirada. Sin permiso: al Menú.
+            Seguridad.Requerir(this, "VerAdecuaciones");
 
             Page.MaintainScrollPositionOnPostBack = true;
             if (!IsPostBack)

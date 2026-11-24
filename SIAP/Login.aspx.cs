@@ -7,6 +7,13 @@ namespace SIAP
     {
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (!IsPostBack)
+            {
+                // Entrar al Login (cerrar sesión, sesión expirada o primera vez) termina la sesión del servidor.
+                // Antes "Cerrar sesión" solo limpiaba el navegador y la sesión seguía viva en el servidor.
+                Session.Clear();
+                Session.Abandon();
+            }
             TxtUsuario.Focus();
         }
 

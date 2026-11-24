@@ -20,9 +20,9 @@ namespace SIAP.Repositories
         {
             using (var db = Conexion())
             {
+                // SELECT * para que funcione con o sin las columnas que agrega el script 08
                 return db.Query<SegmentoEstructura>(@"
-                    SELECT Anio, Orden, Abreviatura, Nombre, Longitud, Posicion, LongitudClave,
-                           TablaCatalogo, ColumnaClave, ColumnaPadre, SegmentoPadre, ColumnaFK
+                    SELECT *
                     FROM dbo.vw_estructuraclave
                     WHERE Anio = @anio
                     ORDER BY Orden", new { anio }).ToList();
@@ -112,26 +112,31 @@ namespace SIAP.Repositories
         /// Los nombres de tabla y columnas se validan contra sys.columns antes de armar la consulta.
         /// Devuelve null si la tabla o alguna columna no existe.
         /// </summary>
-        public List<RegistroCatalogo> LeerCatalogo(string tabla, string columnaClave, string columnaPadre)
+        public List<RegistroCatalogo> LeerCatalogo(string tabla, string columnaClave, string columnaPadre,
+                                                   string columnaAnio = null, int? anio = null)
         {
             if (string.IsNullOrWhiteSpace(tabla)) return null;
-            if (tabla.Contains("]") || (columnaClave ?? "").Contains("]") || (columnaPadre ?? "").Contains("]")) return null;
+            if (tabla.Contains("]") || (columnaClave ?? "").Contains("]") || (columnaPadre ?? "").Contains("]")
+                || (columnaAnio ?? "").Contains("]")) return null;
             var cols = ColumnasDeTabla(tabla);
             if (cols.Count == 0 || !cols.Contains("Id")) return null;
             if (string.IsNullOrWhiteSpace(columnaClave)) columnaClave = "Clave";
             if (!cols.Contains(columnaClave)) return null;
             bool conPadre = !string.IsNullOrWhiteSpace(columnaPadre);
             if (conPadre && !cols.Contains(columnaPadre)) return null;
+            bool conAnio = !string.IsNullOrWhiteSpace(columnaAnio) && anio.HasValue;
+            if (conAnio && !cols.Contains(columnaAnio)) return null;
 
             string colDesc = cols.Contains("Descripcion") ? "[Descripcion]" : cols.Contains("Nombre") ? "[Nombre]" : "CAST(NULL AS NVARCHAR(10))";
             string sql =
                 "SELECT [Id], LTRIM(RTRIM(CAST([" + columnaClave + "] AS NVARCHAR(50)))) AS Clave, " +
                 (conPadre ? "TRY_CAST([" + columnaPadre + "] AS INT)" : "CAST(NULL AS INT)") + " AS PadreId, " +
-                colDesc + " AS Descripcion FROM dbo.[" + tabla + "] ORDER BY [Id]";
+                colDesc + " AS Descripcion FROM dbo.[" + tabla + "]" +
+                (conAnio ? " WHERE [" + columnaAnio + "] = @anio" : "") + " ORDER BY [Id]";
 
             using (var db = Conexion())
             {
-                return db.Query<RegistroCatalogo>(sql).ToList();
+                return db.Query<RegistroCatalogo>(sql, new { anio }).ToList();
             }
         }
     }

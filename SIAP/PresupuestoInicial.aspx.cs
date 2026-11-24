@@ -6,10 +6,8 @@ namespace SIAP
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["UsuarioId"] == null || Session["VerPresupuesto"] == null || !(bool)Session["VerPresupuesto"])
-            {
-                Response.Redirect("Login.aspx");
-            }
+            // Sin sesión: al Login con aviso de sesión expirada. Sin permiso: al Menú.
+            Seguridad.Requerir(this, "VerPresupuesto");
         }
     }
 }
